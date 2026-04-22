@@ -1,0 +1,12 @@
+{
+  "name": "lynx-startups-chat",
+  "version": "1.0.0",
+  "description": "Sistema de chat instantáneo - Lynx Startups",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

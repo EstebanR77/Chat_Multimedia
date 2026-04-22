@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/login.css">
+    <title>Lynx Startups - Login</title>
+</head>
+<body>
+    <div class="login-box">
+        <h1>Lynx Startups</h1>
+        <p class="subtitle">INICIA SESIÓN</p>
+        <div id="loginForm">
+            <label for="email">Correo empresarial</label>
+            <input type="email" id="email" placeholder="tucorreo@lynx.com" required>
+
+            <label for="password">Contraseña</label>
+            <div class="password-wrapper">
+                <input type="password" id="password" placeholder="••••••••" required>
+                <button type="button" class="toggle-password" onclick="togglePassword()">👁</button>
+            </div>
+
+            <button class="btn-ingresar" onclick="handleLogin()">Ingresar</button>
+            <p id="errorMsg" class="error-msg"></p>
+        </div>
+    </div>
+
+    <script src="js/services/api.js"></script>
+    <script src="js/ui/loginUI.js"></script>
+    <script src="js/login.js"></script>
+</body>
+</html>

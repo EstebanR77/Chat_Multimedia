@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/chat.css">
+    <title>Lynx Startups - Chat</title>
+</head>
+<body>
+    <div class="chat-container">
+
+        <!-- Sidebar: lista de usuarios -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Lynx Startups</h2>
+                <p>Equipo</p>
+            </div>
+            <ul id="userList" class="user-list">
+                <!-- Los usuarios se agregan desde chatUI.js -->
+            </ul>
+            <div class="sidebar-footer">
+                <button onclick="logout()" class="btn-logout">Cerrar sesión</button>
+            </div>
+        </aside>
+
+        <!-- Área principal del chat -->
+        <main class="chat-main">
+            <header class="chat-header">
+                <h3>Chat General</h3>
+                <span id="onlineCount">0 en línea</span>
+            </header>
+
+            <!-- Mensajes -->
+            <div id="messages" class="messages"></div>
+
+            <!-- Input para escribir -->
+            <div class="chat-input">
+                <input type="text" id="msgInput" placeholder="Escribe un mensaje..." onkeydown="handleKey(event)">
+                <button onclick="sendMessage()">Enviar</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/services/api.js"></script>
+    <script src="js/ui/chatUI.js"></script>
+    <script src="js/web/chatSocket.js"></script>
+    <script src="js/chat.js"></script>
+</body>
+</html>

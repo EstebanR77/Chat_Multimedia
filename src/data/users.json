@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "name": "Admin Lynx",
+    "email": "admin@lynx.com",
+    "password": "123",
+    "rol": "Administrador",
+    "img": "admin.png"
+  },
+  {
+    "id": "2",
+    "name": "Carlos López",
+    "email": "carlos@lynx.com",
+    "password": "123",
+    "rol": "Desarrollador",
+    "img": "user2.png"
+  },
+  {
+    "id": "3",
+    "name": "María Gómez",
+    "email": "maria@lynx.com",
+    "password": "123",
+    "rol": "Diseñadora",
+    "img": "user3.png"
+  }
+]
