@@ -24,33 +24,55 @@ function addMessage(data, currentUserId) {
         `;
         container.appendChild(el);
     }
-
-    // Scroll automático al último mensaje
     container.scrollTop = container.scrollHeight;
 }
 
-// Actualiza la lista de usuarios en el sidebar
+// Actualiza ambos sidebars: izquierdo (canales) y derecho (personas)
 function updateUserList(users) {
-    const list = document.getElementById('userList');
-    const onlineCount = document.getElementById('onlineCount');
-    list.innerHTML = '';
+    const onlineList  = document.getElementById('onlineList');
+    const offlineList = document.getElementById('offlineList');
+    const onlineLabel  = document.getElementById('onlineLabel');
+    const offlineLabel = document.getElementById('offlineLabel');
+    const onlineCount  = document.getElementById('onlineCount');
 
-    let online = 0;
+    if (!onlineList || !offlineList) return;
+
+    onlineList.innerHTML  = '';
+    offlineList.innerHTML = '';
+
+    let onlineN = 0, offlineN = 0;
+
     users.forEach(u => {
-        if (u.connected) online++;
         const initials = u.name[0].toUpperCase();
+        const isGoogle = u.provider === 'google';
+        const handle   = u.email ? '@' + u.email.split('@')[0] : '@' + u.name.toLowerCase().replace(' ', '');
+
         const li = document.createElement('li');
-        li.className = 'user-item';
+        li.className = 'people-item';
+
+        const avatarClass = `people-avatar ${u.connected ? 'online' : ''} ${isGoogle ? 'google' : ''}`;
+        const avatarInner = (isGoogle && u.img)
+            ? `<img src="${u.img}" alt="${u.name}" referrerpolicy="no-referrer">`
+            : initials;
+
         li.innerHTML = `
-            <div class="user-avatar">${initials}</div>
-            <div class="user-info">
-                <div class="user-name">${u.name}</div>
-                <div class="user-rol">${u.rol}</div>
+            <div class="${avatarClass}">${avatarInner}</div>
+            <div class="people-info">
+                <div class="people-name">${u.name}</div>
+                <div class="people-handle">${handle}</div>
             </div>
-            <div class="status-dot ${u.connected ? 'online' : ''}"></div>
         `;
-        list.appendChild(li);
+
+        if (u.connected) {
+            onlineList.appendChild(li);
+            onlineN++;
+        } else {
+            offlineList.appendChild(li);
+            offlineN++;
+        }
     });
 
-    onlineCount.textContent = `${online} en línea`;
+    onlineLabel.textContent  = `En línea · ${onlineN} persona${onlineN !== 1 ? 's' : ''}`;
+    offlineLabel.textContent = `Desconectados · ${offlineN} persona${offlineN !== 1 ? 's' : ''}`;
+    onlineCount.textContent  = `${onlineN} en línea`;
 }

@@ -9,41 +9,143 @@
 <body>
     <div class="chat-container">
 
-        <!-- Sidebar: lista de usuarios -->
-        <aside class="sidebar">
+        <!-- ═══════════════════════════════
+             SIDEBAR IZQUIERDO — Canales
+        ════════════════════════════════ -->
+        <aside class="sidebar-left">
+            <!-- Header con logo y botón cerrar -->
             <div class="sidebar-header">
-                <h2>Lynx Startups</h2>
-                <p>Equipo</p>
+                <div class="sidebar-title">
+                    <span class="close-btn">✕</span>
+                    <h2>Lynx Startups</h2>
+                    <span class="collapse-btn">‹</span>
+                </div>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" placeholder="Search" id="searchInput">
+                    <button class="add-btn">+</button>
+                </div>
             </div>
-            <ul id="userList" class="user-list">
-                <!-- Los usuarios se agregan desde chatUI.js -->
-            </ul>
+
+            <!-- Lista de canales -->
+            <div class="channels-list">
+                <!-- Proyecto activo con canales expandidos -->
+                <div class="project-item active">
+                    <span class="project-icon">◉</span>
+                    <span class="project-name">Proyecto some text</span>
+                </div>
+                <div class="channels-group">
+                    <div class="channel-item active" onclick="selectChannel(this, 'Canal General')">
+                        <span>#</span> Canal General
+                    </div>
+                    <div class="channel-item" onclick="selectChannel(this, 'Diseño')">
+                        <span>#</span> Diseño
+                    </div>
+                    <div class="channel-item" onclick="selectChannel(this, 'Desarrollo')">
+                        <span>#</span> Desarrollo
+                    </div>
+                    <div class="channel-item" onclick="selectChannel(this, 'Marketing')">
+                        <span>#</span> Marketing
+                    </div>
+                    <div class="channel-item" onclick="selectChannel(this, 'General')">
+                        <span>#</span> General
+                    </div>
+                </div>
+
+                <!-- Otros proyectos -->
+                <div class="project-item" onclick="toggleProject(this)">
+                    <span class="project-icon">◎</span>
+                    <span class="project-name">Proyecto some text</span>
+                </div>
+                <div class="project-item" onclick="toggleProject(this)">
+                    <span class="project-icon">◎</span>
+                    <span class="project-name">Proyecto some text</span>
+                </div>
+                <div class="project-item" onclick="toggleProject(this)">
+                    <span class="project-icon">◎</span>
+                    <span class="project-name">Proyecto some text</span>
+                </div>
+                <div class="project-item" onclick="toggleProject(this)">
+                    <span class="project-icon">◎</span>
+                    <span class="project-name">Proyecto some text</span>
+                </div>
+                <div class="project-item" onclick="toggleProject(this)">
+                    <span class="project-icon">◎</span>
+                    <span class="project-name">Proyecto some text</span>
+                </div>
+                <div class="project-item" onclick="toggleProject(this)">
+                    <span class="project-icon">◎</span>
+                    <span class="project-name">Proyecto some text</span>
+                </div>
+                <div class="project-item" onclick="toggleProject(this)">
+                    <span class="project-icon">◎</span>
+                    <span class="project-name">Proyecto some text</span>
+                </div>
+                <div class="project-item" onclick="toggleProject(this)">
+                    <span class="project-icon">◎</span>
+                    <span class="project-name">Proyecto some text</span>
+                </div>
+            </div>
+
+            <!-- Footer con logout -->
             <div class="sidebar-footer">
                 <button onclick="logout()" class="btn-logout">Cerrar sesión</button>
             </div>
         </aside>
 
-        <!-- Área principal del chat -->
+        <!-- ═══════════════════════════════
+             ÁREA CENTRAL — Mensajes
+        ════════════════════════════════ -->
         <main class="chat-main">
             <header class="chat-header">
-                <h3>Chat General</h3>
+                <h3 id="channelTitle"># Canal General</h3>
                 <span id="onlineCount">0 en línea</span>
             </header>
 
-            <!-- Mensajes -->
             <div id="messages" class="messages"></div>
 
-            <!-- Input para escribir -->
             <div class="chat-input">
                 <input type="text" id="msgInput" placeholder="Escribe un mensaje..." onkeydown="handleKey(event)">
-                <button onclick="sendMessage()">Enviar</button>
+                <button onclick="sendMessage()" class="send-btn">➤</button>
             </div>
         </main>
+
+        <!-- ═══════════════════════════════
+             SIDEBAR DERECHO — Personas
+        ════════════════════════════════ -->
+        <aside class="sidebar-right">
+            <div class="people-header">
+                <h3>Personas</h3>
+            </div>
+
+            <!-- En línea -->
+            <div class="people-section">
+                <p class="section-label" id="onlineLabel">En línea · 0 personas</p>
+                <ul id="onlineList" class="people-list"></ul>
+            </div>
+
+            <!-- Desconectados -->
+            <div class="people-section">
+                <p class="section-label" id="offlineLabel">Desconectados · 0 personas</p>
+                <ul id="offlineList" class="people-list"></ul>
+            </div>
+        </aside>
+
     </div>
 
     <script src="js/services/api.js"></script>
     <script src="js/ui/chatUI.js"></script>
     <script src="js/web/chatSocket.js"></script>
     <script src="js/chat.js"></script>
+    <script>
+        function selectChannel(el, name) {
+            document.querySelectorAll('.channel-item').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('channelTitle').textContent = '# ' + name;
+        }
+        function toggleProject(el) {
+            el.classList.toggle('active');
+        }
+    </script>
 </body>
 </html>

@@ -1,41 +1,129 @@
-const http      = require('http');
-const fs        = require('fs');
-const path      = require('path');
-const WebSocket = require('ws');
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const setupChat  = require('./web/chat');
+require("dotenv").config();
 
-const server = http.createServer((req, res) => {
-    if (req.url.startsWith('/api/login')) return authRoutes(req, res);
-    if (req.url.startsWith('/api/users')) return userRoutes(req, res);
+const express        = require("express");
+const session        = require("express-session");
+const passport       = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const path           = require("path");
+const WebSocket      = require("ws");
+const authRoutes     = require("./routes/auth");
+const userRoutes     = require("./routes/users");
+const setupChat      = require("./web/chat");
 
-    let url = req.url === '/' ? '/login.html' : req.url;
-    let filePath = path.join(__dirname, '../public', url);
+const app = express();
 
-    fs.readFile(filePath, (err, content) => {
-        if (err) {
-            res.writeHead(404, { 'Content-Type': 'text/plain' });
-            res.end('Archivo no encontrado');
-        } else {
-            const mimeTypes = {
-                '.html': 'text/html',
-                '.css':  'text/css',
-                '.js':   'application/javascript',
-                '.json': 'application/json',
-                '.png':  'image/png',
-                '.jpg':  'image/jpeg',
-            };
-            const contentType = mimeTypes[path.extname(filePath)] || 'text/plain';
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content);
-        }
+// ─────────────────────────────────────────────
+// 1. CONFIGURACIÓN DE SESIÓN
+// ─────────────────────────────────────────────
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 1000 * 60 * 60 * 24, // 24 horas
+        httpOnly: true,               // No accesible desde JS (seguridad)
+    },
+}));
+
+// ─────────────────────────────────────────────
+// 2. PASSPORT – serialización del usuario
+// ─────────────────────────────────────────────
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
+
+// ─────────────────────────────────────────────
+// 3. ESTRATEGIA DE GOOGLE OAuth 2.0
+// ─────────────────────────────────────────────
+passport.use(new GoogleStrategy({
+    clientID:     process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL:  "/auth/google/callback",   // relativo, igual que el profe
+},
+(accessToken, refreshToken, profile, done) => {
+    const user = {
+        id:       profile.id,
+        name:     profile.displayName,
+        email:    profile.emails[0].value,
+        img:      profile.photos[0].value,
+        avatar:   profile.photos[0].value,
+        rol:      "Usuario Google",
+        provider: "google",
+    };
+    return done(null, user);
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// ─────────────────────────────────────────────
+// 4. ARCHIVOS ESTÁTICOS Y JSON
+// ─────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, "../public")));
+app.use(express.json());
+
+// ─────────────────────────────────────────────
+// 5. RUTAS DE AUTENTICACIÓN GOOGLE
+// ─────────────────────────────────────────────
+
+// Inicia el flujo OAuth → redirige a Google
+app.get("/auth/google",
+    passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+// Google regresa aquí con el code
+app.get("/auth/google/callback",
+    passport.authenticate("google", { failureRedirect: "/login.html?error=auth_failed" }),
+    (req, res) => {
+        // Login exitoso → redirige al chat
+        res.redirect("/chat.html");
+    }
+);
+
+// Cerrar sesión (servidor + cliente)
+app.get("/auth/logout", (req, res) => {
+    req.logout(() => {
+        req.session.destroy(() => {
+            res.redirect("/login.html");
+        });
     });
+});
+
+// ─────────────────────────────────────────────
+// 6. API – usuario actual (igual que el profe)
+// ─────────────────────────────────────────────
+app.get("/api/me", (req, res) => {
+    if (req.isAuthenticated()) {
+        res.json({ authenticated: true, user: req.user });
+    } else {
+        res.json({ authenticated: false });
+    }
+});
+
+// ─────────────────────────────────────────────
+// 7. RUTAS API DEL CHAT (login normal + usuarios)
+// ─────────────────────────────────────────────
+app.post("/api/login", authRoutes);
+app.use("/api/users",  userRoutes);
+
+// Ruta raíz
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "../public/login.html"));
+});
+
+// ─────────────────────────────────────────────
+// 8. SERVIDOR HTTP + WEBSOCKET
+// ─────────────────────────────────────────────
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => {
+    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`Rutas disponibles:`);
+    console.log(`   GET  /                      → Login`);
+    console.log(`   GET  /auth/google           → Inicia OAuth con Google`);
+    console.log(`   GET  /auth/google/callback  → Callback de Google`);
+    console.log(`   GET  /auth/logout           → Cierra sesión`);
+    console.log(`   GET  /api/me               → Usuario autenticado`);
+    console.log(`   POST /api/login            → Login normal`);
 });
 
 const wss = new WebSocket.Server({ server });
 setupChat(wss);
-
-server.listen(3000, () => {
-    console.log('Servidor corriendo en http://localhost:3000');
-});

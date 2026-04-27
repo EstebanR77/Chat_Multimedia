@@ -66,3 +66,55 @@ input:focus { border-color: #2563EB; }
 .btn-ingresar:hover { background-color: #1746ae; }
 
 .error-msg { color: #e03c3c; font-size: 0.82rem; margin-top: 20px; min-height: 18px; }
+
+/* ── Divisor "o" ────────────────────────────────────────── */
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 0 16px;
+    color: #9D9D9C;
+    font-size: 0.82rem;
+}
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #ddd;
+}
+
+/* ── Botón Google ────────────────────────────────────────── */
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 11px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #444;
+    text-decoration: none;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
+}
+.btn-google:hover {
+    background: #f5f5f5;
+    box-shadow: 0px 4px 8px rgba(0,0,0,0.15);
+}
+.btn-google img {
+    width: 20px;
+    height: 20px;
+}
+
+/* Tamaño del SVG de Google */
+.google-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
