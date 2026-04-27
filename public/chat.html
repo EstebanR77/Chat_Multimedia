@@ -16,81 +16,58 @@
             <!-- Header con logo y botón cerrar -->
             <div class="sidebar-header">
                 <div class="sidebar-title">
-                    <span class="close-btn">✕</span>
                     <h2>Lynx Startups</h2>
                     <span class="collapse-btn">‹</span>
                 </div>
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
                     <input type="text" placeholder="Search" id="searchInput">
-                    <button class="add-btn">+</button>
+                    <button class="add-btn" id="openCreateBtn" type="button">+</button>
                 </div>
             </div>
+
+            <div class="create-panel hide" id="createPanel">
+                <div class="create-actions">
+                    <button type="button" class="create-option" data-create="project">Nuevo proyecto</button>
+                    <button type="button" class="create-option" data-create="channel">Nuevo canal</button>
+                </div>
+            </div>
+            
 
             <!-- Lista de canales -->
             <div class="channels-list">
-                <!-- Proyecto activo con canales expandidos -->
-                <div class="project-item active">
-                    <span class="project-icon">◉</span>
-                    <span class="project-name">Proyecto some text</span>
+                <!-- Encabezado PROYECTOS -->
+                <div class="projects-header">
+                    <span>PROYECTOS</span>
                 </div>
-                <div class="channels-group">
+
+                <!-- Proyecto activo con canales expandidos -->
+                <div class="project-item active" data-project-name="Trabajo empresarial" onclick="toggleProject(this)">
+                    <span class="project-icon">▼</span>
+                    <span class="project-name"># Trabajo empresarial</span>
+                </div>
+                <div class="channels-group active">
                     <div class="channel-item active" onclick="selectChannel(this, 'Canal General')">
-                        <span>#</span> Canal General
+                        <span>#</span> Canal
                     </div>
                     <div class="channel-item" onclick="selectChannel(this, 'Diseño')">
-                        <span>#</span> Diseño
+                        <span>#</span> Canal
                     </div>
                     <div class="channel-item" onclick="selectChannel(this, 'Desarrollo')">
-                        <span>#</span> Desarrollo
+                        <span>#</span> Canal
                     </div>
                     <div class="channel-item" onclick="selectChannel(this, 'Marketing')">
-                        <span>#</span> Marketing
+                        <span>#</span> Canal
                     </div>
                     <div class="channel-item" onclick="selectChannel(this, 'General')">
-                        <span>#</span> General
+                        <span>#</span> Canal
                     </div>
                 </div>
 
-                <!-- Otros proyectos -->
-                <div class="project-item" onclick="toggleProject(this)">
-                    <span class="project-icon">◎</span>
-                    <span class="project-name">Proyecto some text</span>
-                </div>
-                <div class="project-item" onclick="toggleProject(this)">
-                    <span class="project-icon">◎</span>
-                    <span class="project-name">Proyecto some text</span>
-                </div>
-                <div class="project-item" onclick="toggleProject(this)">
-                    <span class="project-icon">◎</span>
-                    <span class="project-name">Proyecto some text</span>
-                </div>
-                <div class="project-item" onclick="toggleProject(this)">
-                    <span class="project-icon">◎</span>
-                    <span class="project-name">Proyecto some text</span>
-                </div>
-                <div class="project-item" onclick="toggleProject(this)">
-                    <span class="project-icon">◎</span>
-                    <span class="project-name">Proyecto some text</span>
-                </div>
-                <div class="project-item" onclick="toggleProject(this)">
-                    <span class="project-icon">◎</span>
-                    <span class="project-name">Proyecto some text</span>
-                </div>
-                <div class="project-item" onclick="toggleProject(this)">
-                    <span class="project-icon">◎</span>
-                    <span class="project-name">Proyecto some text</span>
-                </div>
-                <div class="project-item" onclick="toggleProject(this)">
-                    <span class="project-icon">◎</span>
-                    <span class="project-name">Proyecto some text</span>
-                </div>
+
             </div>
 
-            <!-- Footer con logout -->
-            <div class="sidebar-footer">
-                <button onclick="logout()" class="btn-logout">Cerrar sesión</button>
-            </div>
+           
         </aside>
 
         <!-- ═══════════════════════════════
@@ -99,7 +76,6 @@
         <main class="chat-main">
             <header class="chat-header">
                 <h3 id="channelTitle"># Canal General</h3>
-                <span id="onlineCount">0 en línea</span>
             </header>
 
             <div id="messages" class="messages"></div>
@@ -115,7 +91,7 @@
         ════════════════════════════════ -->
         <aside class="sidebar-right">
             <div class="people-header">
-                <h3>Personas</h3>
+                <h3>PERSONAS</h3>
             </div>
 
             <!-- En línea -->
@@ -129,8 +105,68 @@
                 <p class="section-label" id="offlineLabel">Desconectados · 0 personas</p>
                 <ul id="offlineList" class="people-list"></ul>
             </div>
+            
+             <!-- Footer con logout -->
+            <div class="sidebar-footer">
+                <button onclick="logout()" class="btn-logout">Cerrar sesión</button>
+            </div>
+             
         </aside>
+        
 
+    </div>
+
+    <div class="modal-backdrop hide" id="modalBackdrop"></div>
+    <div class="modal hide" id="createModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-card">
+            <button class="modal-close" type="button" id="modalClose" aria-label="Cerrar modal">×</button>
+            <div class="modal-header">
+                <span class="modal-icon">+</span>
+                <div>
+                    <h2 id="modalTitle">Nuevo proyecto</h2>
+                    <p class="modal-subtitle" id="modalSubtitle">Crea un nuevo proyecto para organizar tus canales.</p>
+                </div>
+            </div>
+
+            <form id="createForm">
+                <div class="form-group" id="itemNameGroup">
+                    <label for="itemName" id="itemNameLabel">Nombre del proyecto</label>
+                    <input id="itemName" name="itemName" type="text" required placeholder="Ej. App cliente">
+                </div>
+
+                <div class="form-group" id="projectParticipantsGroup">
+                    <label for="participantsSearch">Participantes</label>
+                    <input id="participantsSearch" type="search" placeholder="Buscar participantes">
+                    <div class="participants-list" aria-label="Participantes disponibles">
+                        <span class="participant-chip">Sara</span>
+                        <span class="participant-chip">Esteban</span>
+                        <span class="participant-chip">Paula</span>
+                    </div>
+                </div>
+
+                <div class="form-group toggle-group" id="projectDefaultChannelsGroup">
+                    <label class="checkbox-label"><input type="checkbox" id="defaultChannels" checked> Crear con canales de default</label>
+                    <p class="help-text">Se crearán General, Diseño, Desarrollo y Marketing.</p>
+                </div>
+
+                <div class="form-group hide" id="channelProjectGroup">
+                    <label for="projectSelect">Proyecto al que se va a añadir el canal</label>
+                    <select id="projectSelect" name="projectSelect">
+                        <option value="">Selecciona un proyecto</option>
+                    </select>
+                </div>
+
+                <div class="form-group hide" id="channelNameGroup">
+                    <label for="channelName">Nombre del canal</label>
+                    <input id="channelName" name="channelName" type="text" placeholder="Ej. #Marketing #Frontend">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="modalCancel">Cerrar</button>
+                    <button type="submit" class="btn btn-primary" id="modalSubmit">Crear proyecto</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="js/services/api.js"></script>
@@ -145,6 +181,11 @@
         }
         function toggleProject(el) {
             el.classList.toggle('active');
+            // Encuentra el channels-group que sigue después de este proyecto
+            const nextElement = el.nextElementSibling;
+            if (nextElement && nextElement.classList.contains('channels-group')) {
+                nextElement.classList.toggle('active');
+            }
         }
     </script>
 </body>
