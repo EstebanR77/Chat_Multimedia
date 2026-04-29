@@ -470,6 +470,16 @@ body {
     display: block;
 }
 
+.channels-group.search-open {
+    display: block;
+}
+
+.project-item.search-hidden,
+.channels-group.search-hidden,
+.channel-item.search-hidden {
+    display: none !important;
+}
+
 .channel-item {
     display: flex;
     align-items: center;

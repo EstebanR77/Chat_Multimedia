@@ -14,6 +14,13 @@ const slugify = (value) => value
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || `item-${Date.now()}`;
 
+const normalizeText = (value) => value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
 async function checkSession() {
     try {
         const res = await fetch('/api/me');
@@ -105,6 +112,50 @@ function bindProjectAndChannelClicks() {
 
     document.querySelectorAll('.channel-item').forEach((channelEl) => {
         channelEl.addEventListener('click', () => selectChatChannel(channelEl));
+    });
+}
+
+function initSidebarSearch() {
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', () => applySidebarSearch(searchInput.value));
+}
+
+function applySidebarSearch(value) {
+    const query = normalizeText(value);
+
+    document.querySelectorAll('.project-item').forEach((projectEl) => {
+        const channelsGroup = projectEl.nextElementSibling;
+        const channelItems = channelsGroup && channelsGroup.classList.contains('channels-group')
+            ? Array.from(channelsGroup.querySelectorAll('.channel-item'))
+            : [];
+
+        if (!query) {
+            projectEl.classList.remove('search-hidden');
+            if (channelsGroup) {
+                channelsGroup.classList.remove('search-hidden', 'search-open');
+            }
+            channelItems.forEach(channelEl => channelEl.classList.remove('search-hidden'));
+            return;
+        }
+
+        const projectMatches = normalizeText(projectEl.dataset.projectName || projectEl.textContent).includes(query);
+        let visibleChannels = 0;
+
+        channelItems.forEach((channelEl) => {
+            const channelMatches = normalizeText(channelEl.dataset.channelName || channelEl.textContent).includes(query);
+            const shouldShowChannel = projectMatches || channelMatches;
+            channelEl.classList.toggle('search-hidden', !shouldShowChannel);
+            if (shouldShowChannel) visibleChannels++;
+        });
+
+        const shouldShowProject = projectMatches || visibleChannels > 0;
+        projectEl.classList.toggle('search-hidden', !shouldShowProject);
+        if (channelsGroup) {
+            channelsGroup.classList.toggle('search-hidden', !shouldShowProject);
+            channelsGroup.classList.toggle('search-open', shouldShowProject);
+        }
     });
 }
 
@@ -405,6 +456,7 @@ function addProjectToSidebar(project, options = {}) {
     projectList.appendChild(newProject);
     projectList.appendChild(channelsGroup);
     projects.set(project.id, project);
+    applySidebarSearch(document.getElementById('searchInput')?.value || '');
 }
 
 function addChannelFromServer(projectId, channel) {
@@ -414,6 +466,7 @@ function addChannelFromServer(projectId, channel) {
 
     project.channels.push(channel);
     createChannelElement(projectId, channel, channelsGroup);
+    applySidebarSearch(document.getElementById('searchInput')?.value || '');
 }
 
 function markUnread(projectId, channelId) {
@@ -472,6 +525,7 @@ function initSidebarCollapse() {
 window.addEventListener('DOMContentLoaded', () => {
     initCreateControls();
     initSidebarCollapse();
+    initSidebarSearch();
 });
 
 checkSession();
