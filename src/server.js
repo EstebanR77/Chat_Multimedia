@@ -9,8 +9,19 @@ const WebSocket      = require("ws");
 const authRoutes     = require("./routes/auth");
 const userRoutes     = require("./routes/users");
 const setupChat      = require("./web/chat");
+const { upsertUser } = require("./models/users");
 
 const app = express();
+
+const toSessionUser = (user) => ({
+    id:       user.id,
+    name:     user.name,
+    email:    user.email,
+    img:      user.img,
+    avatar:   user.avatar || user.img,
+    rol:      user.rol,
+    provider: user.provider,
+});
 
 // ─────────────────────────────────────────────
 // 1. CONFIGURACIÓN DE SESIÓN
@@ -40,16 +51,17 @@ passport.use(new GoogleStrategy({
     callbackURL:  "/auth/google/callback",   // relativo, igual que el profe
 },
 (accessToken, refreshToken, profile, done) => {
-    const user = {
-        id:       profile.id,
+    const email = profile.emails[0].value.trim().toLowerCase();
+    const img = profile.photos[0].value;
+    const user = upsertUser({
         name:     profile.displayName,
-        email:    profile.emails[0].value,
-        img:      profile.photos[0].value,
-        avatar:   profile.photos[0].value,
+        email,
+        img,
+        avatar:   img,
         rol:      "Usuario Google",
         provider: "google",
-    };
-    return done(null, user);
+    });
+    return done(null, toSessionUser(user));
 }));
 
 app.use(passport.initialize());

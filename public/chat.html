@@ -42,25 +42,25 @@
                 </div>
 
                 <!-- Proyecto activo con canales expandidos -->
-                <div class="project-item active" data-project-name="Trabajo empresarial" onclick="toggleProject(this)">
+                <div class="project-item active" data-project-id="trabajo-empresarial" data-project-name="Trabajo empresarial">
                     <span class="project-icon">▼</span>
                     <span class="project-name"># Trabajo empresarial</span>
                 </div>
                 <div class="channels-group active">
-                    <div class="channel-item active" onclick="selectChannel(this, 'Canal General')">
-                        <span>#</span> Canal
+                    <div class="channel-item active" data-channel-id="canal-general" data-channel-name="Canal General">
+                        <span>#</span> Canal General
                     </div>
-                    <div class="channel-item" onclick="selectChannel(this, 'Diseño')">
-                        <span>#</span> Canal
+                    <div class="channel-item" data-channel-id="diseno" data-channel-name="Diseno">
+                        <span>#</span> Diseno
                     </div>
-                    <div class="channel-item" onclick="selectChannel(this, 'Desarrollo')">
-                        <span>#</span> Canal
+                    <div class="channel-item" data-channel-id="desarrollo" data-channel-name="Desarrollo">
+                        <span>#</span> Desarrollo
                     </div>
-                    <div class="channel-item" onclick="selectChannel(this, 'Marketing')">
-                        <span>#</span> Canal
+                    <div class="channel-item" data-channel-id="marketing" data-channel-name="Marketing">
+                        <span>#</span> Marketing
                     </div>
-                    <div class="channel-item" onclick="selectChannel(this, 'General')">
-                        <span>#</span> Canal
+                    <div class="channel-item" data-channel-id="general" data-channel-name="General">
+                        <span>#</span> General
                     </div>
                 </div>
 
@@ -137,10 +137,8 @@
                 <div class="form-group" id="projectParticipantsGroup">
                     <label for="participantsSearch">Participantes</label>
                     <input id="participantsSearch" type="search" placeholder="Buscar participantes">
-                    <div class="participants-list" aria-label="Participantes disponibles">
-                        <span class="participant-chip">Sara</span>
-                        <span class="participant-chip">Esteban</span>
-                        <span class="participant-chip">Paula</span>
+                    <div class="participants-list" id="participantsList" aria-label="Participantes disponibles">
+                        <span class="participant-chip">Cargando usuarios...</span>
                     </div>
                 </div>
 

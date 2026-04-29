@@ -1,21 +1,23 @@
 let socket;
+const pendingMessages = [];
 
 function connectSocket(user, onMessage) {
-    // Conecta al servidor WebSocket
     socket = new WebSocket(`ws://${location.host}`);
 
     socket.onopen = () => {
-        // Al conectar, envía el mensaje de tipo "login" con los datos del usuario
         socket.send(JSON.stringify({ type: 'login', user }));
+        while (pendingMessages.length) {
+            socket.send(JSON.stringify(pendingMessages.shift()));
+        }
     };
 
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        onMessage(data); // Pasa el mensaje a chat.js para procesarlo
+        onMessage(data);
     };
 
     socket.onclose = () => {
-        console.log('Conexión WebSocket cerrada');
+        console.log('Conexion WebSocket cerrada');
     };
 
     socket.onerror = (err) => {
@@ -23,14 +25,51 @@ function connectSocket(user, onMessage) {
     };
 }
 
-function sendChatMessage(user, text) {
-    if (socket && socket.readyState === 1) {
-        socket.send(JSON.stringify({
-            type:   'chat',
-            userId: user.id,
-            name:   user.name,
-            img:    user.img,
-            text:   text
-        }));
+function sendSocketMessage(message) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(message));
+        return;
     }
+
+    pendingMessages.push(message);
+}
+
+function joinChatRoom(project, channel) {
+    sendSocketMessage({
+        type: 'switch-room',
+        projectId: project.id,
+        projectName: project.name,
+        channelId: channel.id,
+        channelName: channel.name,
+        memberIds: project.memberIds
+    });
+}
+
+function sendCreateProject(project) {
+    sendSocketMessage({
+        type: 'create-project',
+        project
+    });
+}
+
+function sendCreateChannel(projectId, channel) {
+    sendSocketMessage({
+        type: 'create-channel',
+        projectId,
+        channel
+    });
+}
+
+function sendChatMessage(user, text, project, channel) {
+    sendSocketMessage({
+        type: 'chat',
+        projectId: project.id,
+        projectName: project.name,
+        channelId: channel.id,
+        channelName: channel.name,
+        userId: user.id,
+        name: user.name,
+        img: user.img,
+        text
+    });
 }

@@ -1,6 +1,6 @@
 async function handleLogin() {
     clearError();
-    const email    = document.getElementById('email').value.trim();
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
 
     if (!email || !password) {
@@ -16,7 +16,7 @@ async function handleLogin() {
         localStorage.setItem('user', JSON.stringify(result.user));
         window.location.href = 'chat.html';
     } else {
-        showError('Correo o contraseña incorrectos.');
+        showError(result.message || 'Correo o contrasena incorrectos.');
     }
 }
 
@@ -25,7 +25,7 @@ function togglePassword() {
     input.type = input.type === 'password' ? 'text' : 'password';
 }
 
-// También permite presionar Enter para ingresar
+// Tambien permite presionar Enter para ingresar
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleLogin();
 });

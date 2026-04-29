@@ -1,66 +1,191 @@
-// Obtiene el usuario guardado en localStorage
-let currentUser = JSON.parse(localStorage.getItem("user"));
+let currentUser = JSON.parse(localStorage.getItem('user'));
+let currentProject = null;
+let currentChannel = null;
+let allUsers = [];
 
-// ─────────────────────────────────────────────
-// Verificar sesión con el servidor (igual que el profe)
-// Si viene de Google OAuth, /api/me lo confirma
-// ─────────────────────────────────────────────
+const projects = new Map();
+
+const slugify = (value) => value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || `item-${Date.now()}`;
+
 async function checkSession() {
     try {
-        const res  = await fetch("/api/me");
+        const res = await fetch('/api/me');
         const data = await res.json();
 
         if (data.authenticated) {
-            // Viene de Google: guardar en localStorage igual que login normal
-            localStorage.setItem("user", JSON.stringify(data.user));
+            localStorage.setItem('user', JSON.stringify(data.user));
             currentUser = data.user;
             iniciarChat();
         } else if (currentUser) {
-            // Viene de login normal: ya está en localStorage
             iniciarChat();
         } else {
-            // No hay sesión de ningún tipo → redirige al login
-            window.location.href = "login.html";
+            window.location.href = 'login.html';
         }
     } catch {
-        // Si falla la red, intenta con localStorage
         if (currentUser) {
             iniciarChat();
         } else {
-            window.location.href = "login.html";
+            window.location.href = 'login.html';
         }
     }
 }
 
-function iniciarChat() {
-    // Conecta al WebSocket y define qué hacer con cada mensaje
+async function iniciarChat() {
+    allUsers = await getUsers();
+    initProjectsFromDom();
+    bindProjectAndChannelClicks();
+    selectInitialRoom();
+
     connectSocket(currentUser, (data) => {
-        if (data.type === "users") {
+        if (data.type === 'project-created') {
+            addProjectFromServer(data.project, !data.isCreator);
+        }
+
+        if (data.type === 'channel-created') {
+            addChannelFromServer(data.projectId, data.channel);
+        }
+
+        if (data.type === 'users' && currentProject && data.projectId === currentProject.id) {
             updateUserList(data.users);
-        } else if (data.type === "chat" || data.type === "system") {
+        }
+
+        if (data.type === 'history' && isCurrentRoom(data)) {
+            renderMessages(data.messages, currentUser.id);
+        }
+
+        if ((data.type === 'chat' || data.type === 'system') && isCurrentRoom(data)) {
             addMessage(data, currentUser.id);
+        } else if (data.type === 'chat') {
+            markUnread(data.projectId, data.channelId);
         }
     });
 }
 
-// Envía mensaje al presionar el botón
+function initProjectsFromDom() {
+    document.querySelectorAll('.project-item').forEach((projectEl) => {
+        const projectId = projectEl.dataset.projectId || slugify(projectEl.dataset.projectName);
+        const projectName = projectEl.dataset.projectName || projectEl.textContent.replace('#', '').trim();
+        const channelsGroup = projectEl.nextElementSibling;
+        const channels = [];
+
+        projectEl.dataset.projectId = projectId;
+        projectEl.dataset.projectName = projectName;
+
+        if (channelsGroup && channelsGroup.classList.contains('channels-group')) {
+            channelsGroup.querySelectorAll('.channel-item').forEach((channelEl) => {
+                const channelName = channelEl.dataset.channelName || channelEl.textContent.replace('#', '').trim();
+                const channelId = channelEl.dataset.channelId || slugify(channelName);
+                channelEl.dataset.projectId = projectId;
+                channelEl.dataset.channelId = channelId;
+                channelEl.dataset.channelName = channelName;
+                channels.push({ id: channelId, name: channelName });
+            });
+        }
+
+        projects.set(projectId, {
+            id: projectId,
+            name: projectName,
+            memberIds: allUsers.map(user => user.id),
+            channels
+        });
+    });
+}
+
+function bindProjectAndChannelClicks() {
+    document.querySelectorAll('.project-item').forEach((projectEl) => {
+        projectEl.addEventListener('click', () => toggleChatProject(projectEl));
+    });
+
+    document.querySelectorAll('.channel-item').forEach((channelEl) => {
+        channelEl.addEventListener('click', () => selectChatChannel(channelEl));
+    });
+}
+
+function selectInitialRoom() {
+    const activeChannel = document.querySelector('.channel-item.active') || document.querySelector('.channel-item');
+    if (activeChannel) {
+        selectChatChannel(activeChannel);
+    }
+}
+
+function isCurrentRoom(data) {
+    return currentProject
+        && currentChannel
+        && data.projectId === currentProject.id
+        && data.channelId === currentChannel.id;
+}
+
+function selectChatChannel(channelEl) {
+    const projectId = channelEl.dataset.projectId || getProjectElementForChannel(channelEl).dataset.projectId;
+    const project = projects.get(projectId);
+    if (!project) return;
+
+    const channel = {
+        id: channelEl.dataset.channelId,
+        name: channelEl.dataset.channelName
+    };
+
+    currentProject = project;
+    currentChannel = channel;
+
+    document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
+    channelEl.classList.add('active');
+    channelEl.classList.remove('has-unread');
+    const projectEl = getProjectElementForChannel(channelEl);
+    if (projectEl) {
+        projectEl.classList.remove('new-project');
+        const channelsGroup = projectEl.nextElementSibling;
+        if (channelsGroup && !channelsGroup.querySelector('.channel-item.has-unread')) {
+            projectEl.classList.remove('has-unread');
+        }
+    }
+    document.getElementById('channelTitle').textContent = `# ${project.name} / ${channel.name}`;
+    clearMessages();
+    joinChatRoom(project, channel);
+}
+
+function getProjectElementForChannel(channelEl) {
+    const channelsGroup = channelEl.closest('.channels-group');
+    return channelsGroup ? channelsGroup.previousElementSibling : null;
+}
+
+function toggleChatProject(projectEl) {
+    projectEl.classList.toggle('active');
+    const channelsGroup = projectEl.nextElementSibling;
+    if (channelsGroup && channelsGroup.classList.contains('channels-group')) {
+        channelsGroup.classList.toggle('active');
+    }
+
+    const firstChannel = channelsGroup ? channelsGroup.querySelector('.channel-item') : null;
+    if (firstChannel && projectEl.classList.contains('active')) {
+        selectChatChannel(firstChannel);
+        projectEl.classList.remove('new-project');
+    }
+}
+
 function sendMessage() {
-    const input = document.getElementById("msgInput");
-    const text  = input.value.trim();
-    if (!text) return;
-    sendChatMessage(currentUser, text);
-    input.value = "";
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text || !currentProject || !currentChannel) return;
+
+    sendChatMessage(currentUser, text, currentProject, currentChannel);
+    input.value = '';
 }
 
-// Envía mensaje al presionar Enter
 function handleKey(e) {
-    if (e.key === "Enter") sendMessage();
+    if (e.key === 'Enter') sendMessage();
 }
 
-// Cierra sesión: limpia localStorage + sesión del servidor
 function logout() {
-    localStorage.removeItem("user");
-    window.location.href = "/auth/logout";
+    localStorage.removeItem('user');
+    window.location.href = '/auth/logout';
 }
 
 function initCreateControls() {
@@ -84,41 +209,26 @@ function initCreateControls() {
 
     openBtn.addEventListener('click', () => {
         const isOpen = !createPanel.classList.contains('hide');
-        if (isOpen) {
-            createPanel.classList.add('hide');
-            channelsList.classList.remove('create-open');
-        } else {
-            createPanel.classList.remove('hide');
-            collapseAllProjects();
-            channelsList.classList.add('create-open');
-        }
+        createPanel.classList.toggle('hide', isOpen);
+        channelsList.classList.toggle('create-open', !isOpen);
     });
 
     document.querySelectorAll('.create-option').forEach((button) => {
-        button.addEventListener('click', () => {
-            openCreateModal(button.dataset.create);
-        });
+        button.addEventListener('click', () => openCreateModal(button.dataset.create));
     });
 
     modalClose.addEventListener('click', closeCreateModal);
     modalCancel.addEventListener('click', closeCreateModal);
     backdrop.addEventListener('click', closeCreateModal);
     createForm.addEventListener('submit', handleCreateSubmit);
-
-    function collapseAllProjects() {
-        document.querySelectorAll('.project-item.active').forEach((project) => {
-            project.classList.remove('active');
-            const next = project.nextElementSibling;
-            if (next && next.classList.contains('channels-group')) {
-                next.classList.remove('active');
-            }
-        });
-    }
+    document.getElementById('participantsSearch').addEventListener('input', renderParticipants);
 
     function openCreateModal(type) {
         activeType = type;
         createPanel.classList.add('hide');
+        channelsList.classList.remove('create-open');
         renderProjectOptions();
+        renderParticipants();
         setModalType(type);
         modal.classList.remove('hide');
         modal.classList.add('show');
@@ -131,7 +241,7 @@ function initCreateControls() {
     function setModalType(type) {
         if (type === 'project') {
             document.getElementById('modalTitle').textContent = 'Nuevo proyecto';
-            document.getElementById('modalSubtitle').textContent = 'Crea un nuevo proyecto para organizar tus canales.';
+            document.getElementById('modalSubtitle').textContent = 'Crea un proyecto con sus propios canales y participantes.';
             itemNameLabel.textContent = 'Nombre del proyecto';
             itemNameInput.placeholder = 'Ej. App cliente';
             projectParticipantsGroup.classList.remove('hide');
@@ -141,13 +251,13 @@ function initCreateControls() {
             formSubmit.textContent = 'Crear proyecto';
         } else {
             document.getElementById('modalTitle').textContent = 'Nuevo canal';
-            document.getElementById('modalSubtitle').textContent = 'Añade un canal nuevo a uno de tus proyectos existentes.';
+            document.getElementById('modalSubtitle').textContent = 'Anade un canal al proyecto seleccionado.';
             itemNameLabel.textContent = 'Nombre del canal';
-            itemNameInput.placeholder = 'Ej. #Marketing #Frontend';
+            itemNameInput.placeholder = 'Ej. Marketing';
             projectParticipantsGroup.classList.add('hide');
             projectDefaultChannelsGroup.classList.add('hide');
             channelProjectGroup.classList.remove('hide');
-            channelNameGroup.classList.remove('hide');
+            channelNameGroup.classList.add('hide');
             formSubmit.textContent = 'Crear canal';
         }
     }
@@ -181,58 +291,169 @@ function initCreateControls() {
 
     function renderProjectOptions() {
         projectSelect.innerHTML = '<option value="">Selecciona un proyecto</option>';
-        const projects = Array.from(document.querySelectorAll('.project-item')).map((item) => item.dataset.projectName).filter(Boolean);
-        projects.forEach((projectName) => {
+        projects.forEach((project) => {
             const option = document.createElement('option');
-            option.value = projectName;
-            option.textContent = projectName;
+            option.value = project.id;
+            option.textContent = project.name;
             projectSelect.appendChild(option);
         });
     }
+}
 
-    function createProject(projectName, withDefaults) {
-        const projectList = document.querySelector('.channels-list');
-        const firstGeneral = document.querySelector('.general-item');
+function renderParticipants() {
+    const participantsList = document.getElementById('participantsList');
+    const search = document.getElementById('participantsSearch').value.trim().toLowerCase();
+    if (!participantsList) return;
 
-        const newProject = document.createElement('div');
-        newProject.className = 'project-item';
-        newProject.dataset.projectName = projectName;
-        newProject.innerHTML = '<span class="project-icon">▼</span><span class="project-name"># ' + projectName + '</span>';
-        newProject.addEventListener('click', () => toggleProject(newProject));
+    const filteredUsers = allUsers.filter(user => {
+        const text = `${user.name} ${user.email}`.toLowerCase();
+        return text.includes(search);
+    });
 
-        const channelsGroup = document.createElement('div');
-        channelsGroup.className = 'channels-group';
-        if (withDefaults) {
-            ['General', 'Diseño', 'Desarrollo', 'Marketing'].forEach((channel) => {
-                const channelItem = document.createElement('div');
-                channelItem.className = 'channel-item';
-                channelItem.innerHTML = '<span>#</span> ' + channel;
-                channelItem.addEventListener('click', () => selectChannel(channelItem, channel));
-                channelsGroup.appendChild(channelItem);
-            });
-        }
+    participantsList.innerHTML = '';
+    filteredUsers.forEach((user) => {
+        const label = document.createElement('label');
+        label.className = 'participant-chip';
+        label.innerHTML = `
+            <input type="checkbox" value="${user.id}" ${user.id === currentUser.id ? 'checked disabled' : ''}>
+            <span>${user.name}</span>
+        `;
+        participantsList.appendChild(label);
+    });
+}
 
-        projectList.insertBefore(channelsGroup, firstGeneral);
-        projectList.insertBefore(newProject, channelsGroup);
+function getSelectedParticipantIds() {
+    const selected = Array.from(document.querySelectorAll('#participantsList input:checked'))
+        .map(input => Number(input.value));
+    if (!selected.includes(currentUser.id)) {
+        selected.push(currentUser.id);
     }
+    return selected;
+}
 
-    function createChannel(projectName, channelName) {
-        const projectItem = Array.from(document.querySelectorAll('.project-item')).find((item) => item.dataset.projectName === projectName);
-        if (!projectItem) return;
+function createProject(projectName, withDefaults) {
+    const projectId = getUniqueProjectId(projectName);
+    const memberIds = getSelectedParticipantIds();
+    const channelNames = withDefaults ? ['General', 'Diseno', 'Desarrollo', 'Marketing'] : ['General'];
+    const project = {
+        id: projectId,
+        name: projectName,
+        memberIds,
+        channels: channelNames.map(channelName => ({ id: getUniqueChannelId(projectId, channelName), name: channelName }))
+    };
 
-        const channelsGroup = projectItem.nextElementSibling;
-        if (!channelsGroup || !channelsGroup.classList.contains('channels-group')) return;
+    addProjectToSidebar(project, { active: true });
+    sendCreateProject(project);
+    const channelsGroup = getChannelsGroup(projectId);
+    selectChatChannel(channelsGroup.querySelector('.channel-item'));
+}
 
-        const channelItem = document.createElement('div');
-        channelItem.className = 'channel-item';
-        channelItem.innerHTML = '<span>#</span> ' + channelName;
-        channelItem.addEventListener('click', () => selectChannel(channelItem, channelName));
-        channelsGroup.appendChild(channelItem);
-        if (!channelsGroup.classList.contains('active')) {
-            projectItem.classList.add('active');
-            channelsGroup.classList.add('active');
-        }
+function createChannel(projectId, channelName) {
+    const projectItem = document.querySelector(`.project-item[data-project-id="${projectId}"]`);
+    const project = projects.get(projectId);
+    if (!projectItem || !project) return;
+
+    const channelsGroup = projectItem.nextElementSibling;
+    if (!channelsGroup || !channelsGroup.classList.contains('channels-group')) return;
+
+    const channel = { id: getUniqueChannelId(projectId, channelName), name: channelName };
+    createChannelElement(projectId, channel, channelsGroup);
+    project.channels.push(channel);
+    sendCreateChannel(projectId, channel);
+
+    projectItem.classList.add('active');
+    channelsGroup.classList.add('active');
+    selectChatChannel(channelsGroup.lastElementChild);
+}
+
+function createChannelElement(projectId, channel, channelsGroup) {
+    const channelItem = document.createElement('div');
+    channelItem.className = 'channel-item';
+    channelItem.dataset.projectId = projectId;
+    channelItem.dataset.channelId = channel.id;
+    channelItem.dataset.channelName = channel.name;
+    channelItem.innerHTML = '<span>#</span> ' + channel.name;
+    channelItem.addEventListener('click', () => selectChatChannel(channelItem));
+    channelsGroup.appendChild(channelItem);
+    return channel;
+}
+
+function addProjectFromServer(project, showAsNew) {
+    const projectExists = projects.has(project.id);
+    addProjectToSidebar(project, { isNew: showAsNew && !projectExists });
+}
+
+function addProjectToSidebar(project, options = {}) {
+    if (projects.has(project.id)) return;
+
+    const projectList = document.querySelector('.channels-list');
+    const newProject = document.createElement('div');
+    newProject.className = 'project-item';
+    if (options.active) newProject.classList.add('active');
+    if (options.isNew) newProject.classList.add('new-project');
+    newProject.dataset.projectId = project.id;
+    newProject.dataset.projectName = project.name;
+    newProject.innerHTML = '<span class="project-icon">v</span><span class="project-name"># ' + project.name + '</span>';
+    newProject.addEventListener('click', () => toggleChatProject(newProject));
+
+    const channelsGroup = document.createElement('div');
+    channelsGroup.className = 'channels-group';
+    if (options.active) channelsGroup.classList.add('active');
+
+    project.channels.forEach(channel => createChannelElement(project.id, channel, channelsGroup));
+
+    projectList.appendChild(newProject);
+    projectList.appendChild(channelsGroup);
+    projects.set(project.id, project);
+}
+
+function addChannelFromServer(projectId, channel) {
+    const project = projects.get(projectId);
+    const channelsGroup = getChannelsGroup(projectId);
+    if (!project || !channelsGroup || project.channels.some(item => item.id === channel.id)) return;
+
+    project.channels.push(channel);
+    createChannelElement(projectId, channel, channelsGroup);
+}
+
+function markUnread(projectId, channelId) {
+    const channelEl = document.querySelector(`.channel-item[data-project-id="${projectId}"][data-channel-id="${channelId}"]`);
+    const projectEl = document.querySelector(`.project-item[data-project-id="${projectId}"]`);
+    if (!channelEl || !projectEl) return;
+
+    channelEl.classList.add('has-unread');
+    if (!projectEl.classList.contains('new-project')) {
+        projectEl.classList.add('has-unread');
     }
+}
+
+function getChannelsGroup(projectId) {
+    const projectItem = document.querySelector(`.project-item[data-project-id="${projectId}"]`);
+    return projectItem ? projectItem.nextElementSibling : null;
+}
+
+function getUniqueProjectId(projectName) {
+    const baseId = slugify(projectName);
+    let id = baseId;
+    let counter = 2;
+    while (projects.has(id)) {
+        id = `${baseId}-${counter}`;
+        counter++;
+    }
+    return id;
+}
+
+function getUniqueChannelId(projectId, channelName) {
+    const project = projects.get(projectId);
+    const existingIds = project ? project.channels.map(channel => channel.id) : [];
+    const baseId = slugify(channelName);
+    let id = baseId;
+    let counter = 2;
+    while (existingIds.includes(id)) {
+        id = `${baseId}-${counter}`;
+        counter++;
+    }
+    return id;
 }
 
 function initSidebarCollapse() {
@@ -243,7 +464,7 @@ function initSidebarCollapse() {
 
     collapseBtn.addEventListener('click', () => {
         const collapsed = chatContainer.classList.toggle('collapsed');
-        collapseBtn.textContent = collapsed ? '›' : '‹';
+        collapseBtn.textContent = collapsed ? '>' : '<';
         collapseBtn.setAttribute('aria-label', collapsed ? 'Expandir sidebar' : 'Colapsar sidebar');
     });
 }
@@ -253,5 +474,4 @@ window.addEventListener('DOMContentLoaded', () => {
     initSidebarCollapse();
 });
 
-// Iniciar verificación de sesión
 checkSession();

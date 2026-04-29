@@ -1,1 +1,37 @@
-[]
+[
+  {
+    "id": 1,
+    "name": "Admin",
+    "password": "1234",
+    "email": "admin@chat.com",
+    "rol": "admin",
+    "img": "https://i.pravatar.cc/150?img=1"
+  },
+  {
+    "id": 2,
+    "name": "Usuario",
+    "password": "abcd",
+    "email": "user@chat.com",
+    "rol": "user",
+    "img": "https://i.pravatar.cc/150?img=2"
+  },
+  {
+    "id": 3,
+    "name": "PAULA XIMENA ANTONIO FRANCO",
+    "password": "",
+    "email": "pxantonio@uniboyaca.edu.co",
+    "rol": "Usuario Google",
+    "img": "https://lh3.googleusercontent.com/a/ACg8ocIblYsv0-91ZbfIsG0QF-WZ_-q5EdcRegyH8ff07_IOI8h8aw=s96-c",
+    "provider": "google",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIblYsv0-91ZbfIsG0QF-WZ_-q5EdcRegyH8ff07_IOI8h8aw=s96-c"
+  },
+  {
+    "id": 4,
+    "name": "SARA JIMENA BARRERA MORA",
+    "password": "",
+    "email": "sarbarrera@uniboyaca.edu.co",
+    "rol": "Usuario Google",
+    "img": "https://lh3.googleusercontent.com/a/ACg8ocJOf5TpK4Bt7t2RJh5NyAyW3xbqyf7n7bHKw1t3uLTTdruhXnU=s96-c",
+    "provider": "google"
+  }
+]

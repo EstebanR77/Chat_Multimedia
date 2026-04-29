@@ -6,9 +6,9 @@ async function loginUser(email, password) {
             body: JSON.stringify({ email, password })
         });
         const data = await response.json();
-        return response.ok ? { success: true, user: data.user } : { success: false };
+        return response.ok ? { success: true, user: data.user } : { success: false, message: data.error };
     } catch {
-        return { success: false };
+        return { success: false, message: 'No se pudo conectar con el servidor.' };
     }
 }
 

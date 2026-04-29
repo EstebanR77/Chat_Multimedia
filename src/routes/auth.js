@@ -1,28 +1,43 @@
-const { getUsers } = require('../models/users');
+const { getUserByEmail } = require('../models/users');
+
+const publicUser = (user) => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    rol: user.rol,
+    img: user.img,
+    provider: user.provider
+});
 
 function authRoutes(req, res) {
-    let body = '';
-    req.on('data', chunk => { body += chunk; });
-    req.on('end', () => {
-        try {
-            const { email, password } = JSON.parse(body);
-            const users = getUsers();
-            const user  = users.find(u => u.email === email && u.password === password);
-            if (!user) {
-                res.writeHead(401, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Credenciales inválidas' }));
-                return;
-            }
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-                message: 'Login exitoso',
-                user: { id: user.id, name: user.name, email: user.email, rol: user.rol, img: user.img }
-            }));
-        } catch {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Datos inválidos' }));
+    try {
+        const { email, password } = req.body || {};
+
+        if (!email || !password) {
+            res.status(400).json({ error: 'Correo y contrasena son obligatorios' });
+            return;
         }
-    });
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = getUserByEmail(normalizedEmail);
+
+        if (!user) {
+            res.status(404).json({ error: 'Usuario no encontrado' });
+            return;
+        }
+
+        if (!user.password || user.password !== password) {
+            res.status(401).json({ error: 'La contrasena no corresponde' });
+            return;
+        }
+
+        res.status(200).json({
+            message: 'Login exitoso',
+            user: publicUser(user)
+        });
+    } catch {
+        res.status(400).json({ error: 'Datos invalidos' });
+    }
 }
 
 module.exports = authRoutes;

@@ -1,4 +1,4 @@
-// Agrega un mensaje al área de chat
+// Agrega un mensaje al area de chat
 function addMessage(data, currentUserId) {
     const container = document.getElementById('messages');
     const isMine = data.userId === currentUserId;
@@ -17,7 +17,7 @@ function addMessage(data, currentUserId) {
         el.innerHTML = `
             <div class="msg-avatar">${initials}</div>
             <div class="msg-content">
-                <span class="msg-name">${isMine ? 'Tú' : data.name}</span>
+                <span class="msg-name">${isMine ? 'Tu' : data.name}</span>
                 <div class="msg-text">${data.text}</div>
                 <span class="msg-time">${time}</span>
             </div>
@@ -27,25 +27,37 @@ function addMessage(data, currentUserId) {
     container.scrollTop = container.scrollHeight;
 }
 
-// Actualiza ambos sidebars: izquierdo (canales) y derecho (personas)
+function clearMessages() {
+    const container = document.getElementById('messages');
+    if (container) {
+        container.innerHTML = '';
+    }
+}
+
+function renderMessages(messages, currentUserId) {
+    clearMessages();
+    messages.forEach(message => addMessage(message, currentUserId));
+}
+
+// Actualiza el sidebar derecho de personas
 function updateUserList(users) {
-    const onlineList  = document.getElementById('onlineList');
+    const onlineList = document.getElementById('onlineList');
     const offlineList = document.getElementById('offlineList');
-    const onlineLabel  = document.getElementById('onlineLabel');
+    const onlineLabel = document.getElementById('onlineLabel');
     const offlineLabel = document.getElementById('offlineLabel');
-    const onlineCount  = document.getElementById('onlineCount');
 
     if (!onlineList || !offlineList) return;
 
-    onlineList.innerHTML  = '';
+    onlineList.innerHTML = '';
     offlineList.innerHTML = '';
 
-    let onlineN = 0, offlineN = 0;
+    let onlineN = 0;
+    let offlineN = 0;
 
     users.forEach(u => {
-        const initials = u.name[0].toUpperCase();
+        const initials = u.name ? u.name[0].toUpperCase() : '?';
         const isGoogle = u.provider === 'google';
-        const handle   = u.email ? '@' + u.email.split('@')[0] : '@' + u.name.toLowerCase().replace(' ', '');
+        const handle = u.email ? '@' + u.email.split('@')[0] : '@' + u.name.toLowerCase().replace(' ', '');
 
         const li = document.createElement('li');
         li.className = 'people-item';
@@ -72,7 +84,11 @@ function updateUserList(users) {
         }
     });
 
-    onlineLabel.textContent  = `En línea · ${onlineN} persona${onlineN !== 1 ? 's' : ''}`;
-    offlineLabel.textContent = `Desconectados · ${offlineN} persona${offlineN !== 1 ? 's' : ''}`;
-    onlineCount.textContent  = `${onlineN} en línea`;
+    onlineLabel.textContent = `En linea - ${onlineN} persona${onlineN !== 1 ? 's' : ''}`;
+    offlineLabel.textContent = `Desconectados - ${offlineN} persona${offlineN !== 1 ? 's' : ''}`;
+
+    const onlineCount = document.getElementById('onlineCount');
+    if (onlineCount) {
+        onlineCount.textContent = `${onlineN} en linea`;
+    }
 }

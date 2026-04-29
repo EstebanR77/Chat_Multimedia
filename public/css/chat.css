@@ -288,12 +288,18 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     padding: 8px 12px;
     border-radius: 999px;
     background: #eef2ff;
     color: #1d4ed8;
     font-size: 0.82rem;
     font-weight: 600;
+}
+
+.participant-chip input {
+    width: auto;
+    margin: 0;
 }
 
 .help-text {
@@ -409,6 +415,7 @@ body {
     transition: color 0.15s, background 0.15s;
     border-radius: 4px;
     margin: 0 6px;
+    position: relative;
 }
 .project-item:hover { 
     color: white;
@@ -417,6 +424,25 @@ body {
 .project-item.active { 
     color: #0049CD;
     background: rgba(110,179,255,0.1);
+}
+.project-item.new-project {
+    color: #102a6b;
+    background: rgba(79, 108, 255, 0.2);
+    font-weight: 700;
+}
+.project-item.has-unread {
+    color: #102a6b;
+    background: rgba(79, 108, 255, 0.12);
+    font-weight: 650;
+}
+.project-item.new-project::before,
+.project-item.has-unread::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2554d8;
+    flex-shrink: 0;
 }
 .project-icon { 
     font-size: 0.6rem;
@@ -455,6 +481,7 @@ body {
     border-radius: 4px;
     margin: 2px 6px;
     transition: background 0.15s, color 0.15s;
+    position: relative;
 }
 .channel-item:hover { 
     background: rgba(255,255,255,0.07); 
@@ -464,6 +491,19 @@ body {
     background: #A7B9E6;
     color: white;
     font-weight: 500;
+}
+.channel-item.has-unread {
+    background: rgba(37, 84, 216, 0.14);
+    color: #102a6b;
+    font-weight: 700;
+}
+.channel-item.has-unread::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2554d8;
+    flex-shrink: 0;
 }
 
 /* General items */
@@ -645,12 +685,18 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     padding: 8px 12px;
     border-radius: 999px;
     background: #eef2ff;
     color: #1d4ed8;
     font-size: 0.82rem;
     font-weight: 600;
+}
+
+.participant-chip input {
+    width: auto;
+    margin: 0;
 }
 
 .help-text {
@@ -879,6 +925,12 @@ body {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+}
+
+.sidebar-right .sidebar-footer {
+    margin-top: auto;
+    flex-shrink: 0;
+    background: #E4EBFF;
 }
 
 .people-header {
