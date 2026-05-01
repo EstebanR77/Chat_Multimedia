@@ -4,6 +4,10 @@ let connectedUsers = [];
 const roomHistories = new Map();
 const projects = new Map();
 
+function isAdminUser(user) {
+    return user && user.name === 'Admin' && user.rol === 'admin';
+}
+
 function setupChat(wss) {
     wss.on('connection', (ws, req) => {
         console.log('Nueva conexion desde', req.socket.remoteAddress);
@@ -66,6 +70,10 @@ function setupChat(wss) {
             if (data.type === 'create-project') {
                 const user = connectedUsers.find(u => u.ws === ws);
                 if (!user || !data.project) return;
+                if (!isAdminUser(user)) {
+                    send(ws, { type: 'error', message: 'Solo el administrador puede crear proyectos.' });
+                    return;
+                }
 
                 const project = registerProject(data.project);
                 notifyProjectMembers(project, user.id);
@@ -74,6 +82,10 @@ function setupChat(wss) {
             if (data.type === 'create-channel') {
                 const user = connectedUsers.find(u => u.ws === ws);
                 if (!user || !data.projectId || !data.channel) return;
+                if (!isAdminUser(user)) {
+                    send(ws, { type: 'error', message: 'Solo el administrador puede crear canales.' });
+                    return;
+                }
 
                 const project = projects.get(data.projectId);
                 if (!project) return;

@@ -13,6 +13,11 @@ const { upsertUser } = require("./models/users");
 
 const app = express();
 
+// ─────────────────────────────────────────────
+// 0. CONFIANZA EN PROXY REVERSO (para ngrok)
+// ─────────────────────────────────────────────
+app.set('trust proxy', 1);
+
 const toSessionUser = (user) => ({
     id:       user.id,
     name:     user.name,
@@ -22,6 +27,16 @@ const toSessionUser = (user) => ({
     rol:      user.rol,
     provider: user.provider,
 });
+
+const getGoogleCallbackURL = (req) => {
+    if (process.env.GOOGLE_CALLBACK_URL) {
+        return process.env.GOOGLE_CALLBACK_URL.trim();
+    }
+
+    const protocol = req.get("x-forwarded-proto") || req.protocol;
+    const host = req.get("x-forwarded-host") || req.get("host");
+    return `${protocol}://${host}/auth/google/callback`;
+};
 
 // ─────────────────────────────────────────────
 // 1. CONFIGURACIÓN DE SESIÓN
@@ -33,6 +48,8 @@ app.use(session({
     cookie: {
         maxAge: 1000 * 60 * 60 * 24, // 24 horas
         httpOnly: true,               // No accesible desde JS (seguridad)
+        secure: 'auto',
+        sameSite: 'lax',
     },
 }));
 
@@ -48,9 +65,10 @@ passport.deserializeUser((user, done) => done(null, user));
 passport.use(new GoogleStrategy({
     clientID:     process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL:  "/auth/google/callback",   // relativo, igual que el profe
+    callbackURL:  "/auth/google/callback",
+    passReqToCallback: true,
 },
-(accessToken, refreshToken, profile, done) => {
+(req, accessToken, refreshToken, profile, done) => {
     const email = profile.emails[0].value.trim().toLowerCase();
     const img = profile.photos[0].value;
     const user = upsertUser({
@@ -74,17 +92,36 @@ app.use(express.static(path.join(__dirname, "../public")));
 app.use(express.json());
 
 // ─────────────────────────────────────────────
+// 4.1 CORS – Permitir ngrok
+// ─────────────────────────────────────────────
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    // Permitir localhost, 127.0.0.1 y cualquier subdominio de ngrok
+    if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('.ngrok'))) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE, PUT');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+    next();
+});
+
+// ─────────────────────────────────────────────
 // 5. RUTAS DE AUTENTICACIÓN GOOGLE
 // ─────────────────────────────────────────────
 
 // Inicia el flujo OAuth → redirige a Google
-app.get("/auth/google",
-    passport.authenticate("google", { scope: ["profile", "email"] })
-);
+app.get("/auth/google", (req, res, next) => {
+    const callbackURL = getGoogleCallbackURL(req);
+    console.log(`Google OAuth callback: ${callbackURL}`);
+    passport.authenticate("google", { scope: ["profile", "email"], callbackURL })(req, res, next);
+});
 
 // Google regresa aquí con el code
-app.get("/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: "/login.html?error=auth_failed" }),
+app.get("/auth/google/callback", (req, res, next) => {
+    const callbackURL = getGoogleCallbackURL(req);
+    passport.authenticate("google", { failureRedirect: "/login.html?error=auth_failed", callbackURL })(req, res, next);
+},
     (req, res) => {
         // Login exitoso → redirige al chat
         res.redirect("/chat.html");

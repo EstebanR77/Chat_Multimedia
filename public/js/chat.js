@@ -21,6 +21,10 @@ const normalizeText = (value) => value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
+function isAdminUser(user) {
+    return user && user.name === 'Admin' && user.rol === 'admin';
+}
+
 async function checkSession() {
     try {
         const res = await fetch('/api/me');
@@ -51,6 +55,11 @@ async function iniciarChat() {
     selectInitialRoom();
 
     connectSocket(currentUser, (data) => {
+        if (data.type === 'error') {
+            alert(data.message);
+            return;
+        }
+
         if (data.type === 'project-created') {
             addProjectFromServer(data.project, !data.isCreator);
         }
@@ -258,6 +267,12 @@ function initCreateControls() {
     const channelsList = document.querySelector('.channels-list');
     let activeType = 'project';
 
+    if (!isAdminUser(currentUser)) {
+        openBtn.classList.add('hide');
+        createPanel.classList.add('hide');
+        return;
+    }
+
     openBtn.addEventListener('click', () => {
         const isOpen = !createPanel.classList.contains('hide');
         createPanel.classList.toggle('hide', isOpen);
@@ -383,6 +398,8 @@ function getSelectedParticipantIds() {
 }
 
 function createProject(projectName, withDefaults) {
+    if (!isAdminUser(currentUser)) return;
+
     const projectId = getUniqueProjectId(projectName);
     const memberIds = getSelectedParticipantIds();
     const channelNames = withDefaults ? ['General', 'Diseno', 'Desarrollo', 'Marketing'] : ['General'];
@@ -400,6 +417,8 @@ function createProject(projectName, withDefaults) {
 }
 
 function createChannel(projectId, channelName) {
+    if (!isAdminUser(currentUser)) return;
+
     const projectItem = document.querySelector(`.project-item[data-project-id="${projectId}"]`);
     const project = projects.get(projectId);
     if (!projectItem || !project) return;
