@@ -68,7 +68,7 @@ async function iniciarChat() {
             addChannelFromServer(data.projectId, data.channel);
         }
 
-        if (data.type === 'users' && currentProject && data.projectId === currentProject.id) {
+        if (data.type === 'users') {
             updateUserList(data.users);
         }
 

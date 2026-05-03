@@ -2,7 +2,9 @@ let socket;
 const pendingMessages = [];
 
 function connectSocket(user, onMessage) {
-    socket = new WebSocket(`ws://${location.host}`);
+    // Si la página carga por https (ngrok), usar wss://; si es http (local), usar ws://
+    const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+    socket = new WebSocket(`${protocol}://${location.host}`);
 
     socket.onopen = () => {
         socket.send(JSON.stringify({ type: 'login', user }));

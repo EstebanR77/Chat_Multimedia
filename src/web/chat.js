@@ -1,6 +1,16 @@
+const broadcast = require('../utils/broadcast');
+
 const { getUsers } = require('../models/users');
 
 let connectedUsers = [];
+let knownUsers = getUsers().map(u => ({
+    id: u.id,
+    name: u.name,
+    rol: u.rol,
+    email: u.email,
+    img: u.img || u.avatar || '',
+    provider: u.provider || 'google'
+}));
 const roomHistories = new Map();
 const projects = new Map();
 
@@ -32,8 +42,23 @@ function setupChat(wss) {
 
                 connectedUsers = connectedUsers.filter(u => u.id !== currentUser.id);
                 connectedUsers.push(currentUser);
+
+                if (!knownUsers.find(u => u.email === currentUser.email)) {
+                    knownUsers.push({
+                        id: currentUser.id,
+                        name: currentUser.name,
+                        rol: currentUser.rol,
+                        email: currentUser.email,
+                        img: currentUser.img,
+                        provider: currentUser.provider
+                    });
+                }
+
                 console.log('Usuario conectado:', currentUser.name);
                 sendExistingProjects(currentUser);
+
+                // Mandar lista de personas inmediatamente
+                broadcastAllUsers();
             }
 
             if (data.type === 'switch-room') {
@@ -61,9 +86,9 @@ function setupChat(wss) {
                     messages: getRoomHistory(data.projectId, data.channelId)
                 });
 
-                broadcastProjectUsers(data.projectId);
+                broadcastAllUsers();
                 if (previousProjectId && previousProjectId !== data.projectId) {
-                    broadcastProjectUsers(previousProjectId);
+                    broadcastAllUsers();
                 }
             }
 
@@ -74,7 +99,6 @@ function setupChat(wss) {
                     send(ws, { type: 'error', message: 'Solo el administrador puede crear proyectos.' });
                     return;
                 }
-
                 const project = registerProject(data.project);
                 notifyProjectMembers(project, user.id);
             }
@@ -86,15 +110,10 @@ function setupChat(wss) {
                     send(ws, { type: 'error', message: 'Solo el administrador puede crear canales.' });
                     return;
                 }
-
                 const project = projects.get(data.projectId);
                 if (!project) return;
-
                 const exists = project.channels.some(channel => channel.id === data.channel.id);
-                if (!exists) {
-                    project.channels.push(data.channel);
-                }
-
+                if (!exists) project.channels.push(data.channel);
                 notifyProjectMembers(project, user.id, {
                     type: 'channel-created',
                     projectId: project.id,
@@ -115,7 +134,6 @@ function setupChat(wss) {
                     text: data.text,
                     time: new Date().toISOString()
                 };
-
                 addRoomMessage(data.projectId, data.channelId, chatMessage);
                 broadcastRoom(data.projectId, data.channelId, chatMessage);
             }
@@ -126,13 +144,27 @@ function setupChat(wss) {
             if (user) {
                 console.log('Usuario desconectado:', user.name);
                 connectedUsers = connectedUsers.filter(u => u.ws !== ws);
-                if (user.projectId) {
-                    broadcastProjectUsers(user.projectId);
-                }
+                broadcastAllUsers();
             }
         });
 
         ws.on('error', (err) => console.error('Error WS:', err.message));
+    });
+}
+
+function broadcastAllUsers() {
+    const userList = knownUsers.map(u => ({
+        id: u.id,
+        name: u.name,
+        rol: u.rol,
+        email: u.email,
+        img: u.img,
+        provider: u.provider,
+        connected: connectedUsers.some(c => c.email === u.email)
+    }));
+
+    connectedUsers.forEach(user => {
+        send(user.ws, { type: 'users', projectId: user.projectId || '', users: userList });
     });
 }
 
@@ -157,16 +189,6 @@ function broadcastRoom(projectId, channelId, data) {
         .forEach(user => send(user.ws, data));
 }
 
-function broadcastProjectUsers(projectId) {
-    connectedUsers
-        .filter(user => user.projectId === projectId)
-        .forEach(user => send(user.ws, {
-            type: 'users',
-            projectId,
-            users: getProjectUsers(projectId, user.memberIds)
-        }));
-}
-
 function registerProject(projectData) {
     const existing = projects.get(projectData.id);
     const channels = Array.isArray(projectData.channels) ? projectData.channels : [];
@@ -183,12 +205,7 @@ function registerProject(projectData) {
         return existing;
     }
 
-    const project = {
-        id: projectData.id,
-        name: projectData.name,
-        memberIds,
-        channels
-    };
+    const project = { id: projectData.id, name: projectData.name, memberIds, channels };
     projects.set(project.id, project);
     return project;
 }
@@ -201,7 +218,6 @@ function notifyProjectMembers(project, creatorId, extraMessage) {
                 send(user.ws, extraMessage);
                 return;
             }
-
             send(user.ws, {
                 type: 'project-created',
                 project,
@@ -214,7 +230,6 @@ function notifyProjectMembers(project, creatorId, extraMessage) {
 function sendExistingProjects(user) {
     projects.forEach(project => {
         if (!project.memberIds.includes(Number(user.id))) return;
-
         send(user.ws, {
             type: 'project-created',
             project,
@@ -229,33 +244,7 @@ function isProjectMember(user, projectId) {
     if (!project || !project.memberIds.length) {
         return user.projectId === projectId;
     }
-
     return project.memberIds.includes(Number(user.id));
-}
-
-function getProjectUsers(projectId, memberIds) {
-    const registeredUsers = getUsers();
-    const projectMemberIds = memberIds.map(id => Number(id));
-    const users = projectMemberIds.length
-        ? registeredUsers.filter(user => projectMemberIds.includes(Number(user.id)))
-        : registeredUsers;
-
-    return users.map(user => {
-        const connectedUser = connectedUsers.find(connected => (
-            connected.projectId === projectId
-            && (Number(connected.id) === Number(user.id) || (connected.email && connected.email === user.email))
-        ));
-
-        return {
-            id: user.id,
-            name: user.name,
-            rol: user.rol,
-            email: user.email,
-            img: user.img,
-            provider: user.provider,
-            connected: Boolean(connectedUser)
-        };
-    });
 }
 
 function send(ws, data) {
