@@ -44,14 +44,6 @@
     "img": "https://lh3.googleusercontent.com/a/ACg8ocLH3RUkbha_WT7OIwd92oue4v-DvJ4b6YjN_Y7vCjlGwGg97g=s96-c",
     "provider": "google",
     "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLH3RUkbha_WT7OIwd92oue4v-DvJ4b6YjN_Y7vCjlGwGg97g=s96-c"
-  },
-  {
-    "id": 6,
-    "name": "Jaime Rodríguez",
-    "password": "",
-    "email": "jaime.sanchez1725@gmail.com",
-    "rol": "Usuario Google",
-    "img": "https://lh3.googleusercontent.com/a/ACg8ocLC-14e8SmZvSuIEdIF6BXZ2KMqS3KwNIez-EeE1zw-__i09w=s96-c",
-    "provider": "google"
   }
+  
 ]

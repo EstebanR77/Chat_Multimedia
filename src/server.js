@@ -71,6 +71,9 @@ passport.use(new GoogleStrategy({
 (req, accessToken, refreshToken, profile, done) => {
     const email = profile.emails[0].value.trim().toLowerCase();
     const img = profile.photos[0].value;
+    if (!email.endsWith('@uniboyaca.edu.co')) {
+    return done(null, false);
+}
     const user = upsertUser({
         name:     profile.displayName,
         email,

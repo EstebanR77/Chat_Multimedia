@@ -8,6 +8,17 @@ async function handleLogin() {
         return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showError('El correo no tiene un formato válido.');
+        return;
+    }
+
+    if (!email.endsWith('@uniboyaca.edu.co') && !email.endsWith('@chat.com')) {
+        showError('Solo se permiten correos @uniboyaca.edu.co');
+        return;
+    }
+
     setLoading(true);
     const result = await loginUser(email, password);
     setLoading(false);
@@ -16,7 +27,7 @@ async function handleLogin() {
         localStorage.setItem('user', JSON.stringify(result.user));
         window.location.href = 'chat.html';
     } else {
-        showError(result.message || 'Correo o contrasena incorrectos.');
+        showError(result.message || 'Correo o contraseña incorrectos.');
     }
 }
 
@@ -25,7 +36,6 @@ function togglePassword() {
     input.type = input.type === 'password' ? 'text' : 'password';
 }
 
-// Tambien permite presionar Enter para ingresar
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleLogin();
 });

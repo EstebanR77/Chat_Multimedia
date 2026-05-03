@@ -21,7 +21,7 @@
                 </div>
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
-                    <input type="text" placeholder="Search" id="searchInput">
+                    <input type="text" placeholder="Search" id="searchInput" maxlength="40">
                     <button class="add-btn" id="openCreateBtn" type="button">+</button>
                 </div>
             </div>
@@ -73,14 +73,29 @@
         <!-- ═══════════════════════════════
              ÁREA CENTRAL — Mensajes
         ════════════════════════════════ -->
-        <main class="chat-main">
+        <main class="chat-main" style="position:relative">
             <header class="chat-header">
                 <h3 id="channelTitle"># Canal General</h3>
             </header>
 
             <div id="messages" class="messages"></div>
 
+            <!-- Panel de emojis estilo WhatsApp -->
+            <div id="emojiPanel" class="emoji-panel hide">
+                <div class="emoji-categories">
+                    <button class="emoji-cat active" data-cat="smileys" title="Caritas">😀</button>
+                    <button class="emoji-cat" data-cat="gestures" title="Gestos">👋</button>
+                    <button class="emoji-cat" data-cat="hearts" title="Corazones">❤️</button>
+                    <button class="emoji-cat" data-cat="celebration" title="Celebración">🎉</button>
+                    <button class="emoji-cat" data-cat="animals" title="Animales">🐶</button>
+                    <button class="emoji-cat" data-cat="food" title="Comida">🍕</button>
+                    <button class="emoji-cat" data-cat="sports" title="Otros">⚽</button>
+                </div>
+                <div class="emoji-grid" id="emojiGrid"></div>
+            </div>
+
             <div class="chat-input">
+                <button class="emoji-btn" onclick="toggleEmojiPanel()" title="Emojis">😊</button>
                 <input type="text" id="msgInput" placeholder="Escribe un mensaje..." onkeydown="handleKey(event)">
                 <button onclick="sendMessage()" class="send-btn">➤</button>
             </div>
@@ -186,5 +201,59 @@
             }
         }
     </script>
+<script>
+const EMOJIS = {
+    smileys:     ['😀','😁','😂','🤣','😃','😄','😅','😆','😇','😉','😊','😋','😍','🥰','😎','🤩','😏','😒','😞','😔','😟','😕','🙁','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','😱','😨','😰','😥','😓','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','🥵','🥶','🤠','🥸','🤡','👻','💀','☠️'],
+    gestures:    ['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁','👅','👄'],
+    hearts:      ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸️','🪯','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'],
+    celebration: ['🎉','🎊','🎈','🎁','🏆','🥇','🥈','🥉','🎖','🏅','🎗','🎀','🎆','🎇','🧨','✨','🎃','🎄','🎋','🎍','🎎','🎑','🎐','🧧','🎠','🎡','🎢','🎪','🤹','🎭','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🎸','🪕','🎻','🪗'],
+    animals:     ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🕷','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀'],
+    food:        ['🍕','🍔','🍟','🌭','🍿','🧂','🥓','🥚','🍳','🧇','🥞','🧈','🍞','🥐','🥨','🥯','🧀','🥗','🥙','🥪','🌮','🌯','🫔','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹'],
+    sports:      ['⚽','🏀','🏈','⚾','🥎','🏐','🏉','🎾','🥏','🎳','🏏','🏑','🏒','🥍','🏓','🏸','🥊','🥋','🎯','⛳','🎣','🤿','🎽','🎿','🛷','🥌','🪀','🪁','🎱','🔮','🪄','🎮','🕹','🎲','♟','🧩','🪅','🪆','🎭','🎨','🖼','🎰','🚗','🚕','🚙','🚌','🚎','🏎','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍','🛵','🚲','🛴','🛹','🛼','🚏','🛣','🛤','⛽','🚧','⚓','🛟','⛵','🚤','🛥','🛳','⛴','🚢','✈️','🛩','🛫','🛬','🪂','💺','🚀','🛸','🚁','🛺','🚞','🚝','🚄','🚅','🚈','🚂','🚃','🚋','🚆','🚇','🚊','🚉','🌍','🌎','🌏','🗺','🧭','🌋','🏔','⛰','🏕','🏖','🏜','🏝','🏞','🏟','🏛','🏗','🧱','🪨','🪵','🛖','🏘','🏚','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩','🕋','⛲','⛺','🌁','🌃','🏙','🌄','🌅','🌆','🌇','🌉','♨️','🎠','🎡','🎢','💈']
+};
+
+let currentCat = 'smileys';
+
+function renderEmojis(cat) {
+    const grid = document.getElementById('emojiGrid');
+    grid.innerHTML = '';
+    EMOJIS[cat].forEach(emoji => {
+        const span = document.createElement('span');
+        span.textContent = emoji;
+        span.addEventListener('click', () => {
+            document.getElementById('msgInput').value += emoji;
+            document.getElementById('msgInput').focus();
+        });
+        grid.appendChild(span);
+    });
+}
+
+function toggleEmojiPanel() {
+    const panel = document.getElementById('emojiPanel');
+    panel.classList.toggle('hide');
+    if (!panel.classList.contains('hide')) {
+        renderEmojis(currentCat);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.emoji-cat').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.emoji-cat').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentCat = btn.dataset.cat;
+            renderEmojis(currentCat);
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        const panel = document.getElementById('emojiPanel');
+        const btn = document.querySelector('.emoji-btn');
+        if (panel && !panel.contains(e.target) && e.target !== btn) {
+            panel.classList.add('hide');
+        }
+    });
+});
+</script>
 </body>
 </html>

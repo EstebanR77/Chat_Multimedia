@@ -1,4 +1,3 @@
-// Agrega un mensaje al area de chat
 function addMessage(data, currentUserId) {
     const container = document.getElementById('messages');
     const isMine = data.userId === currentUserId;
@@ -9,29 +8,46 @@ function addMessage(data, currentUserId) {
         el.textContent = data.text;
         container.appendChild(el);
     } else {
-        const initials = data.name ? data.name[0].toUpperCase() : '?';
         const time = new Date(data.time).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+        const isGoogle = data.img && data.img.startsWith('http');
+        const avatarInner = isGoogle
+            ? `<img src="${data.img}" alt="${data.name}" referrerpolicy="no-referrer">`
+            : (data.name ? data.name[0].toUpperCase() : '?');
 
         const el = document.createElement('div');
         el.className = 'msg-bubble' + (isMine ? ' mine' : '');
+
+        // PUNTO 10: Mostrar "Tú" si es el usuario actual
+        const displayName = isMine ? 'Tú' : data.name;
+
         el.innerHTML = `
-            <div class="msg-avatar">${initials}</div>
+            <div class="msg-avatar ${isGoogle ? 'google' : ''}">${avatarInner}</div>
             <div class="msg-content">
-                <span class="msg-name">${isMine ? 'Tu' : data.name}</span>
-                <div class="msg-text">${data.text}</div>
+                <span class="msg-name">${displayName}</span>
+                <div class="msg-text">${escapeHtml(data.text)}</div>
                 <span class="msg-time">${time}</span>
             </div>
         `;
         container.appendChild(el);
     }
+
+    // PUNTO 14: Siempre scroll al final cuando el mensaje es largo
     container.scrollTop = container.scrollHeight;
+}
+
+// Escapar HTML para evitar inyecciones en mensajes
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 function clearMessages() {
     const container = document.getElementById('messages');
-    if (container) {
-        container.innerHTML = '';
-    }
+    if (container) container.innerHTML = '';
 }
 
 function renderMessages(messages, currentUserId) {
@@ -39,25 +55,28 @@ function renderMessages(messages, currentUserId) {
     messages.forEach(message => addMessage(message, currentUserId));
 }
 
-// Actualiza el sidebar derecho de personas
 function updateUserList(users) {
-    const onlineList = document.getElementById('onlineList');
-    const offlineList = document.getElementById('offlineList');
-    const onlineLabel = document.getElementById('onlineLabel');
+    const onlineList   = document.getElementById('onlineList');
+    const offlineList  = document.getElementById('offlineList');
+    const onlineLabel  = document.getElementById('onlineLabel');
     const offlineLabel = document.getElementById('offlineLabel');
+    const onlineCount  = document.getElementById('onlineCount');
 
     if (!onlineList || !offlineList) return;
 
-    onlineList.innerHTML = '';
+    onlineList.innerHTML  = '';
     offlineList.innerHTML = '';
 
-    let onlineN = 0;
-    let offlineN = 0;
+    let onlineN = 0, offlineN = 0;
 
     users.forEach(u => {
         const initials = u.name ? u.name[0].toUpperCase() : '?';
         const isGoogle = u.provider === 'google';
-        const handle = u.email ? '@' + u.email.split('@')[0] : '@' + u.name.toLowerCase().replace(' ', '');
+        const handle = u.email ? '@' + u.email.split('@')[0] : '@' + u.name.toLowerCase().replace(/\s+/g, '');
+
+        // PUNTO 7: Badge si es admin
+        const isAdmin = u.rol === 'admin';
+        const adminBadge = isAdmin ? '<span class="badge-admin">ADMIN</span>' : '';
 
         const li = document.createElement('li');
         li.className = 'people-item';
@@ -70,7 +89,7 @@ function updateUserList(users) {
         li.innerHTML = `
             <div class="${avatarClass}">${avatarInner}</div>
             <div class="people-info">
-                <div class="people-name">${u.name}</div>
+                <div class="people-name">${u.name} ${adminBadge}</div>
                 <div class="people-handle">${handle}</div>
             </div>
         `;
@@ -84,11 +103,7 @@ function updateUserList(users) {
         }
     });
 
-    onlineLabel.textContent = `En linea - ${onlineN} persona${onlineN !== 1 ? 's' : ''}`;
-    offlineLabel.textContent = `Desconectados - ${offlineN} persona${offlineN !== 1 ? 's' : ''}`;
-
-    const onlineCount = document.getElementById('onlineCount');
-    if (onlineCount) {
-        onlineCount.textContent = `${onlineN} en linea`;
-    }
+    if (onlineLabel)  onlineLabel.textContent  = `En línea - ${onlineN} persona${onlineN !== 1 ? 's' : ''}`;
+    if (offlineLabel) offlineLabel.textContent = `Desconectados - ${offlineN} persona${offlineN !== 1 ? 's' : ''}`;
+    if (onlineCount)  onlineCount.textContent  = `${onlineN} en línea`;
 }

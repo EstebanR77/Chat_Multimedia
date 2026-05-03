@@ -1032,3 +1032,140 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* ── PUNTO 7: Badge administrador ─────────────────── */
+.badge-admin {
+    display: inline-block;
+    background: #2b6ce6;
+    color: white;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+    margin-left: 3px;
+}
+
+/* ── PUNTO 10: Identificador del usuario actual ─────── */
+.msg-bubble.mine .msg-name {
+    color: #2b6ce6;
+    font-weight: 600;
+}
+
+/* ── PUNTO 13: Animación colapso sidebar ────────────── */
+.sidebar-left {
+    transition: width 0.3s ease, min-width 0.3s ease;
+    overflow: hidden;
+}
+
+.sidebar-left .sidebar-title h2,
+.sidebar-left .search-box,
+.sidebar-left .create-panel,
+.sidebar-left .channels-list,
+.sidebar-left .sidebar-footer {
+    transition: opacity 0.2s ease;
+    opacity: 1;
+}
+
+.chat-container.collapsed .sidebar-left .sidebar-title h2,
+.chat-container.collapsed .sidebar-left .search-box,
+.chat-container.collapsed .sidebar-left .create-panel,
+.chat-container.collapsed .sidebar-left .channels-list,
+.chat-container.collapsed .sidebar-left .sidebar-footer {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ── PUNTO 14: Scroll suave en mensajes ─────────────── */
+.messages {
+    scroll-behavior: smooth;
+}
+
+/* ── Avatar Google en mensajes ───────────────────────── */
+.msg-avatar.google {
+    background: transparent;
+    overflow: hidden;
+}
+.msg-avatar.google img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* ── Botón emoji ─────────────────────────────────────── */
+.emoji-btn {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+.emoji-btn:hover { transform: scale(1.2); }
+
+/* ── Panel de emojis estilo WhatsApp ─────────────────── */
+.emoji-panel {
+    position: absolute;
+    bottom: 70px;
+    left: 16px;
+    background: white;
+    border: 1px solid #e0e2e7;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    z-index: 50;
+    width: 300px;
+    overflow: hidden;
+}
+
+.emoji-categories {
+    display: flex;
+    background: #f7f8fa;
+    border-bottom: 1px solid #e0e2e7;
+    padding: 6px 8px;
+    gap: 2px;
+}
+
+.emoji-cat {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px 7px;
+    border-radius: 8px;
+    transition: background 0.15s;
+    flex: 1;
+    text-align: center;
+}
+.emoji-cat:hover { background: #e8eaed; }
+.emoji-cat.active { background: #e0e8ff; }
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    padding: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 1.3rem;
+}
+
+.emoji-grid::-webkit-scrollbar { width: 4px; }
+.emoji-grid::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+
+.emoji-grid span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+    user-select: none;
+}
+.emoji-grid span:hover {
+    background: #f0f2f5;
+    transform: scale(1.25);
+}
