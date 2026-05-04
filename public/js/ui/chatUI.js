@@ -1,101 +1,154 @@
-function addMessage(data, currentUserId) {
+function safeText(value, fallback = '') {
+    return String(value ?? fallback)
+        .replace(/[\u0000-\u001f\u007f]/g, '')
+        .trim();
+}
+
+function safeImageUrl(value) {
+    try {
+        const url = new URL(String(value || ''), window.location.origin);
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+    } catch {
+        return '';
+    }
+}
+
+function createAvatar(imageUrl, displayName, baseClass) {
+    const avatar = document.createElement('div');
+    const safeUrl = safeImageUrl(imageUrl);
+    const name = safeText(displayName, 'Usuario');
+    avatar.className = baseClass + (safeUrl ? ' google' : '');
+
+    if (safeUrl) {
+        const img = document.createElement('img');
+        img.src = safeUrl;
+        img.alt = name;
+        img.referrerPolicy = 'no-referrer';
+        avatar.appendChild(img);
+    } else {
+        avatar.textContent = name ? name[0].toUpperCase() : '?';
+    }
+
+    return avatar;
+}
+
+function addMessage(data, currentUserId, options = {}) {
     const container = document.getElementById('messages');
+    if (!container) return;
+
     const isMine = data.userId === currentUserId;
+    const shouldScroll = options.scroll !== false;
 
     if (data.type === 'system') {
         const el = document.createElement('div');
         el.className = 'msg-system';
-        el.textContent = data.text;
+        el.textContent = safeText(data.text);
         container.appendChild(el);
     } else {
         const time = new Date(data.time).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-        const isGoogle = data.img && data.img.startsWith('http');
-        const avatarInner = isGoogle
-            ? `<img src="${data.img}" alt="${data.name}" referrerpolicy="no-referrer">`
-            : (data.name ? data.name[0].toUpperCase() : '?');
-
         const el = document.createElement('div');
         el.className = 'msg-bubble' + (isMine ? ' mine' : '');
 
-        // PUNTO 10: Mostrar "Tú" si es el usuario actual
-        const displayName = isMine ? 'Tú' : data.name;
+        const avatar = createAvatar(data.img, data.name, 'msg-avatar');
+        const content = document.createElement('div');
+        content.className = 'msg-content';
 
-        el.innerHTML = `
-            <div class="msg-avatar ${isGoogle ? 'google' : ''}">${avatarInner}</div>
-            <div class="msg-content">
-                <span class="msg-name">${displayName}</span>
-                <div class="msg-text">${escapeHtml(data.text)}</div>
-                <span class="msg-time">${time}</span>
-            </div>
-        `;
+        const name = document.createElement('span');
+        name.className = 'msg-name';
+        name.textContent = isMine ? 'Tu' : safeText(data.name, 'Usuario');
+
+        const text = document.createElement('div');
+        text.className = 'msg-text';
+        text.textContent = safeText(data.text);
+
+        const messageTime = document.createElement('span');
+        messageTime.className = 'msg-time';
+        messageTime.textContent = time;
+
+        content.append(name, text, messageTime);
+        el.append(avatar, content);
         container.appendChild(el);
     }
 
-    // PUNTO 14: Siempre scroll al final cuando el mensaje es largo
-    container.scrollTop = container.scrollHeight;
-}
-
-// Escapar HTML para evitar inyecciones en mensajes
-function escapeHtml(text) {
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+    if (shouldScroll) {
+        container.scrollTop = container.scrollHeight;
+        if (typeof updateRecentMessagesButton === 'function') updateRecentMessagesButton();
+    }
 }
 
 function clearMessages() {
     const container = document.getElementById('messages');
-    if (container) container.innerHTML = '';
+    if (container) container.replaceChildren();
 }
 
 function renderMessages(messages, currentUserId) {
+    const container = document.getElementById('messages');
+    if (!container) return;
+
+    container.classList.add('no-smooth');
     clearMessages();
-    messages.forEach(message => addMessage(message, currentUserId));
+    messages.forEach(message => addMessage(message, currentUserId, { scroll: false }));
+    container.scrollTop = container.scrollHeight;
+    if (typeof updateRecentMessagesButton === 'function') updateRecentMessagesButton();
+
+    requestAnimationFrame(() => {
+        container.classList.remove('no-smooth');
+    });
 }
 
 function updateUserList(users) {
-    const onlineList   = document.getElementById('onlineList');
-    const offlineList  = document.getElementById('offlineList');
-    const onlineLabel  = document.getElementById('onlineLabel');
+    const onlineList = document.getElementById('onlineList');
+    const offlineList = document.getElementById('offlineList');
+    const mobileOnlineList = document.getElementById('mobileOnlineList');
+    const mobileOnlineLabel = document.getElementById('mobileOnlineLabel');
+    const onlineLabel = document.getElementById('onlineLabel');
     const offlineLabel = document.getElementById('offlineLabel');
-    const onlineCount  = document.getElementById('onlineCount');
+    const onlineCount = document.getElementById('onlineCount');
 
     if (!onlineList || !offlineList) return;
 
-    onlineList.innerHTML  = '';
-    offlineList.innerHTML = '';
+    onlineList.replaceChildren();
+    offlineList.replaceChildren();
+    if (mobileOnlineList) mobileOnlineList.replaceChildren();
 
-    let onlineN = 0, offlineN = 0;
+    let onlineN = 0;
+    let offlineN = 0;
 
     users.forEach(u => {
-        const initials = u.name ? u.name[0].toUpperCase() : '?';
-        const isGoogle = u.provider === 'google';
-        const handle = u.email ? '@' + u.email.split('@')[0] : '@' + u.name.toLowerCase().replace(/\s+/g, '');
-
-        // PUNTO 7: Badge si es admin
-        const isAdmin = u.rol === 'admin';
-        const adminBadge = isAdmin ? '<span class="badge-admin">ADMIN</span>' : '';
+        const userName = safeText(u.name, 'Usuario');
+        const email = safeText(u.email);
+        const handle = email ? '@' + email.split('@')[0] : '@' + userName.toLowerCase().replace(/\s+/g, '');
+        const isAdmin = safeText(u.rol).toLowerCase() === 'admin';
 
         const li = document.createElement('li');
         li.className = 'people-item';
 
-        const avatarClass = `people-avatar ${u.connected ? 'online' : ''} ${isGoogle ? 'google' : ''}`;
-        const avatarInner = (isGoogle && u.img)
-            ? `<img src="${u.img}" alt="${u.name}" referrerpolicy="no-referrer">`
-            : initials;
+        const avatar = createAvatar(u.img, userName, 'people-avatar');
+        avatar.classList.toggle('online', Boolean(u.connected));
 
-        li.innerHTML = `
-            <div class="${avatarClass}">${avatarInner}</div>
-            <div class="people-info">
-                <div class="people-name">${u.name} ${adminBadge}</div>
-                <div class="people-handle">${handle}</div>
-            </div>
-        `;
+        const info = document.createElement('div');
+        info.className = 'people-info';
+
+        const name = document.createElement('div');
+        name.className = 'people-name';
+        name.textContent = userName + (isAdmin ? ' ' : '');
+        if (isAdmin) {
+            const adminBadge = document.createElement('span');
+            adminBadge.className = 'badge-admin';
+            adminBadge.textContent = 'ADMIN';
+            name.appendChild(adminBadge);
+        }
+
+        const userHandle = document.createElement('div');
+        userHandle.className = 'people-handle';
+        userHandle.textContent = handle;
+
+        info.append(name, userHandle);
+        li.append(avatar, info);
 
         if (u.connected) {
             onlineList.appendChild(li);
+            if (mobileOnlineList) mobileOnlineList.appendChild(createMobileOnlineUser(u, userName));
             onlineN++;
         } else {
             offlineList.appendChild(li);
@@ -103,7 +156,22 @@ function updateUserList(users) {
         }
     });
 
-    if (onlineLabel)  onlineLabel.textContent  = `En línea - ${onlineN} persona${onlineN !== 1 ? 's' : ''}`;
+    if (onlineLabel) onlineLabel.textContent = `En linea - ${onlineN} persona${onlineN !== 1 ? 's' : ''}`;
+    if (mobileOnlineLabel) mobileOnlineLabel.textContent = `En linea - ${onlineN} persona${onlineN !== 1 ? 's' : ''}`;
     if (offlineLabel) offlineLabel.textContent = `Desconectados - ${offlineN} persona${offlineN !== 1 ? 's' : ''}`;
-    if (onlineCount)  onlineCount.textContent  = `${onlineN} en línea`;
+    if (onlineCount) onlineCount.textContent = `${onlineN} en linea`;
+}
+
+function createMobileOnlineUser(user, userName) {
+    const item = document.createElement('div');
+    item.className = 'mobile-online-user';
+
+    const avatar = createAvatar(user.img, userName, 'mobile-online-avatar');
+    avatar.classList.add('online');
+
+    const name = document.createElement('span');
+    name.textContent = userName.split(/\s+/)[0] || 'Usuario';
+
+    item.append(avatar, name);
+    return item;
 }

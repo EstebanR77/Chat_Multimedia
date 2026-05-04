@@ -44,5 +44,14 @@
     "img": "https://lh3.googleusercontent.com/a/ACg8ocLH3RUkbha_WT7OIwd92oue4v-DvJ4b6YjN_Y7vCjlGwGg97g=s96-c",
     "provider": "google",
     "avatar": "https://lh3.googleusercontent.com/a/ACg8ocLH3RUkbha_WT7OIwd92oue4v-DvJ4b6YjN_Y7vCjlGwGg97g=s96-c"
+  },
+  {
+    "id": 6,
+    "name": "SANTIAGO OCHOA PAIPILLA",
+    "password": "",
+    "email": "sochoa@uniboyaca.edu.co",
+    "rol": "Usuario Google",
+    "img": "https://lh3.googleusercontent.com/a/ACg8ocKCX2IOvZpxthiN1QjeT4daG15fRQYj9cqvo-1cviwyHV4Me7mw=s96-c",
+    "provider": "google"
   }
 ]

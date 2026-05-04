@@ -17,13 +17,25 @@
             <div class="sidebar-header">
                 <div class="sidebar-title">
                     <h2>Lynx Startups</h2>
-                    <span class="collapse-btn">‹</span>
+                    <button class="collapse-btn" type="button" aria-label="Colapsar sidebar">«</button>
+                </div>
+                <div class="mobile-topbar" id="mobileUserBadge" aria-label="Usuario actual">
+                    <span id="mobileUserName">Usuario</span>
+                    <div class="mobile-avatar" id="mobileUserAvatar">?</div>
+                    <div class="mobile-profile-menu hide" id="mobileProfileMenu">
+                        <button onclick="logout()" class="btn-logout" type="button">Cerrar sesion</button>
+                    </div>
                 </div>
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
                     <input type="text" placeholder="Search" id="searchInput" maxlength="40">
                     <button class="add-btn" id="openCreateBtn" type="button">+</button>
                 </div>
+            </div>
+
+            <div class="mobile-section-tabs" aria-label="Secciones principales">
+                <button class="mobile-tab active" id="projectsTabBtn" type="button" onclick="showSidebar()">Proyectos</button>
+                <button class="mobile-tab" id="chatTabBtn" type="button" onclick="showChat()">Chat</button>
             </div>
 
             <div class="create-panel hide" id="createPanel">
@@ -43,24 +55,24 @@
 
                 <!-- Proyecto activo con canales expandidos -->
                 <div class="project-item active" data-project-id="trabajo-empresarial" data-project-name="Trabajo empresarial">
-                    <span class="project-icon">▼</span>
-                    <span class="project-name"># Trabajo empresarial</span>
+                    <span class="project-icon">▾</span>
+                    <span class="project-name">Trabajo empresarial</span>
                 </div>
                 <div class="channels-group active">
                     <div class="channel-item active" data-channel-id="canal-general" data-channel-name="Canal General">
-                        <span>#</span> Canal General
+                        Canal General
                     </div>
-                    <div class="channel-item" data-channel-id="diseno" data-channel-name="Diseno">
-                        <span>#</span> Diseno
+                    <div class="channel-item" data-channel-id="diseno" data-channel-name="Diseño">
+                        Diseño
                     </div>
                     <div class="channel-item" data-channel-id="desarrollo" data-channel-name="Desarrollo">
-                        <span>#</span> Desarrollo
+                        Desarrollo
                     </div>
                     <div class="channel-item" data-channel-id="marketing" data-channel-name="Marketing">
-                        <span>#</span> Marketing
+                        Marketing
                     </div>
                     <div class="channel-item" data-channel-id="general" data-channel-name="General">
-                        <span>#</span> General
+                        General
                     </div>
                 </div>
 
@@ -74,11 +86,22 @@
              ÁREA CENTRAL — Mensajes
         ════════════════════════════════ -->
         <main class="chat-main" style="position:relative">
-            <header class="chat-header"><button class="menu-btn" onclick="showSidebar()">←</button>
-                <h3 id="channelTitle"># Canal General</h3>
+            <header class="chat-header"><button class="menu-btn" onclick="showSidebar()" aria-label="Volver a proyectos">«</button>
+                <h3 id="channelTitle">Canal General</h3>
             </header>
+            <section class="mobile-online-strip" aria-label="Personas en linea">
+                <p class="mobile-online-label" id="mobileOnlineLabel">En linea - 0 personas</p>
+                <div class="mobile-online-list" id="mobileOnlineList"></div>
+            </section>
 
             <div id="messages" class="messages"></div>
+            <button class="recent-messages-btn is-hidden" id="recentMessagesBtn" type="button" aria-label="Ir al ultimo mensaje" title="Ir al ultimo mensaje">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 4v11"></path>
+                    <path d="M7 10l5 5 5-5"></path>
+                    <path d="M5 18h14"></path>
+                </svg>
+            </button>
 
             <!-- Panel de emojis estilo WhatsApp -->
             <div id="emojiPanel" class="emoji-panel hide">
@@ -123,6 +146,13 @@
             
              <!-- Footer con logout -->
             <div class="sidebar-footer">
+                <div class="current-user" id="currentUserBadge" aria-label="Usuario actual">
+                    <div class="current-user-avatar" id="currentUserAvatar">?</div>
+                    <div class="current-user-info">
+                        <span class="current-user-label">Estas conectado como</span>
+                        <span class="current-user-name" id="currentUserName">Usuario</span>
+                    </div>
+                </div>
                 <button onclick="logout()" class="btn-logout">Cerrar sesión</button>
             </div>
              
@@ -132,6 +162,7 @@
     </div>
 
     <div class="modal-backdrop hide" id="modalBackdrop"></div>
+    <div class="modal-backdrop hide" id="deleteModalBackdrop"></div>
     <div class="modal hide" id="createModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-card">
             <button class="modal-close" type="button" id="modalClose" aria-label="Cerrar modal">×</button>
@@ -146,19 +177,24 @@
             <form id="createForm">
                 <div class="form-group" id="itemNameGroup">
                     <label for="itemName" id="itemNameLabel">Nombre del proyecto</label>
-                    <input id="itemName" name="itemName" type="text" required placeholder="Ej. App cliente">
+                    <input id="itemName" name="itemName" type="text" required maxlength="60" placeholder="Ej. App cliente" aria-describedby="itemNameError">
+                    <p class="field-error" id="itemNameError" aria-live="polite"></p>
                 </div>
 
                 <div class="form-group" id="projectParticipantsGroup">
                     <label for="participantsSearch">Participantes</label>
-                    <input id="participantsSearch" type="search" placeholder="Buscar participantes">
+                    <input id="participantsSearch" type="search" maxlength="80" placeholder="Buscar participantes">
                     <div class="participants-list" id="participantsList" aria-label="Participantes disponibles">
                         <span class="participant-chip">Cargando usuarios...</span>
                     </div>
                 </div>
 
                 <div class="form-group toggle-group" id="projectDefaultChannelsGroup">
-                    <label class="checkbox-label"><input type="checkbox" id="defaultChannels" checked> Crear con canales de default</label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="defaultChannels" checked>
+                        <span class="checkbox-switch" aria-hidden="true"></span>
+                        <span class="checkbox-text">Crear canales por default</span>
+                    </label>
                     <p class="help-text">Se crearán General, Diseño, Desarrollo y Marketing.</p>
                 </div>
 
@@ -171,7 +207,7 @@
 
                 <div class="form-group hide" id="channelNameGroup">
                     <label for="channelName">Nombre del canal</label>
-                    <input id="channelName" name="channelName" type="text" placeholder="Ej. #Marketing #Frontend">
+                    <input id="channelName" name="channelName" type="text" maxlength="40" placeholder="Ej. Marketing Frontend">
                 </div>
 
                 <div class="modal-actions">
@@ -179,6 +215,24 @@
                     <button type="submit" class="btn btn-primary" id="modalSubmit">Crear proyecto</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div class="modal hide" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+        <div class="modal-card delete-modal-card">
+            <button class="modal-close" type="button" id="deleteModalClose" aria-label="Cerrar modal">×</button>
+            <div class="modal-header">
+                <span class="modal-icon delete-modal-icon">!</span>
+                <div>
+                    <h2 id="deleteModalTitle">Eliminar elemento</h2>
+                    <p class="modal-subtitle" id="deleteModalMessage">Esta accion no se puede deshacer.</p>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="deleteModalCancel">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="deleteModalConfirm">Eliminar</button>
+            </div>
         </div>
     </div>
 
@@ -190,7 +244,7 @@
         function selectChannel(el, name) {
             document.querySelectorAll('.channel-item').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
-            document.getElementById('channelTitle').textContent = '# ' + name;
+            document.getElementById('channelTitle').textContent = name;
         }
         function toggleProject(el) {
             el.classList.toggle('active');
@@ -261,12 +315,16 @@ function showChat() {
     if (window.innerWidth <= 768) {
         document.querySelector('.sidebar-left').classList.add('hidden-mobile');
         document.querySelector('.chat-main').classList.add('active-mobile');
+        document.getElementById('projectsTabBtn')?.classList.remove('active');
+        document.getElementById('chatTabBtn')?.classList.add('active');
     }
 }
 
 function showSidebar() {
     document.querySelector('.sidebar-left').classList.remove('hidden-mobile');
     document.querySelector('.chat-main').classList.remove('active-mobile');
+    document.getElementById('projectsTabBtn')?.classList.add('active');
+    document.getElementById('chatTabBtn')?.classList.remove('active');
 }
 
 // Al hacer clic en un canal en móvil, ir al chat

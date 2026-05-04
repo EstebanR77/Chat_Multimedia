@@ -1,5 +1,6 @@
 const fs   = require('fs');
 const path = require('path');
+const { sanitizeEmail, sanitizeText, sanitizeUrl } = require('../utils/security');
 
 const DB_PATH = path.join(__dirname, '../data/users.json');
 
@@ -11,7 +12,7 @@ const getUsers = () => {
 
 // Busca un usuario por correo
 const getUserByEmail = (email) => {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = sanitizeEmail(email);
     return getUsers().find(u => u.email && u.email.trim().toLowerCase() === normalizedEmail);
 };
 
@@ -30,14 +31,15 @@ const getNextId = (users) => {
 const createUser = ({ name, email, password = '', rol = 'user', img = '', provider = 'local' }) => {
     const users = getUsers();
     const id = getNextId(users);
+    const safeEmail = sanitizeEmail(email);
     const newUser = {
         id,
-        name,
+        name: sanitizeText(name, 80) || 'Usuario',
         password,
-        email,
-        rol,
-        img: img || `https://i.pravatar.cc/150?u=${encodeURIComponent(email)}`,
-        provider
+        email: safeEmail,
+        rol: sanitizeText(rol, 40) || 'user',
+        img: sanitizeUrl(img) || `https://i.pravatar.cc/150?u=${encodeURIComponent(safeEmail)}`,
+        provider: sanitizeText(provider, 40) || 'local'
     };
 
     users.push(newUser);
@@ -47,7 +49,7 @@ const createUser = ({ name, email, password = '', rol = 'user', img = '', provid
 
 const upsertUser = (userData) => {
     const users = getUsers();
-    const normalizedEmail = userData.email.trim().toLowerCase();
+    const normalizedEmail = sanitizeEmail(userData.email);
     const index = users.findIndex(user => user.email && user.email.trim().toLowerCase() === normalizedEmail);
 
     if (index === -1) {
@@ -57,6 +59,10 @@ const upsertUser = (userData) => {
     users[index] = {
         ...users[index],
         ...userData,
+        name: sanitizeText(userData.name ?? users[index].name, 80) || users[index].name,
+        rol: sanitizeText(userData.rol ?? users[index].rol, 40) || users[index].rol,
+        img: sanitizeUrl(userData.img ?? users[index].img),
+        provider: sanitizeText(userData.provider ?? users[index].provider, 40) || users[index].provider,
         email: normalizedEmail,
         id: users[index].id,
         password: userData.password !== undefined ? userData.password : users[index].password

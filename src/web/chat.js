@@ -1,21 +1,47 @@
 const broadcast = require('../utils/broadcast');
 
 const { getUsers } = require('../models/users');
+const {
+    getDeletedItems,
+    isProjectDeleted,
+    isChannelDeleted,
+    markProjectDeleted,
+    markChannelDeleted
+} = require('../models/deletedItems');
+const {
+    sanitizeChannel,
+    sanitizeProject,
+    sanitizeText,
+    sanitizeUser,
+    slugify
+} = require('../utils/security');
 
 let connectedUsers = [];
-let knownUsers = getUsers().map(u => ({
-    id: u.id,
-    name: u.name,
-    rol: u.rol,
-    email: u.email,
-    img: u.img || u.avatar || '',
-    provider: u.provider || 'google'
-}));
+let knownUsers = getUsers().map(sanitizeUser);
 const roomHistories = new Map();
 const projects = new Map();
 
 function isAdminUser(user) {
     return user && user.name === 'Admin' && user.rol === 'admin';
+}
+
+function normalizeProjectName(value) {
+    return value
+        .toString()
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
+function projectNameExists(projectName) {
+    const normalizedName = normalizeProjectName(projectName);
+    return Array.from(projects.values()).some(project => normalizeProjectName(project.name) === normalizedName);
+}
+
+function channelNameExists(project, channelName) {
+    const normalizedName = normalizeProjectName(channelName);
+    return project.channels.some(channel => normalizeProjectName(channel.name) === normalizedName);
 }
 
 function setupChat(wss) {
@@ -27,13 +53,16 @@ function setupChat(wss) {
             try { data = JSON.parse(message); } catch { return; }
 
             if (data.type === 'login') {
+                const safeUser = sanitizeUser(data.user);
+                if (!Number.isFinite(safeUser.id) || !safeUser.email) return;
+
                 const currentUser = {
-                    id: data.user.id,
-                    name: data.user.name,
-                    rol: data.user.rol || 'Usuario',
-                    email: data.user.email || '',
-                    img: data.user.img || '',
-                    provider: data.user.provider || '',
+                    id: safeUser.id,
+                    name: safeUser.name,
+                    rol: safeUser.rol || 'Usuario',
+                    email: safeUser.email,
+                    img: safeUser.img,
+                    provider: safeUser.provider,
                     projectId: '',
                     channelId: '',
                     memberIds: [],
@@ -55,6 +84,7 @@ function setupChat(wss) {
                 }
 
                 console.log('Usuario conectado:', currentUser.name);
+                send(ws, { type: 'deleted-items', deletedItems: getDeletedItems() });
                 sendExistingProjects(currentUser);
 
                 // Mandar lista de personas inmediatamente
@@ -64,26 +94,29 @@ function setupChat(wss) {
             if (data.type === 'switch-room') {
                 const user = connectedUsers.find(u => u.ws === ws);
                 if (!user) return;
-
-                registerProject({
+                const channel = sanitizeChannel({ id: data.channelId, name: data.channelName });
+                const project = sanitizeProject({
                     id: data.projectId,
                     name: data.projectName,
                     memberIds: data.memberIds,
-                    channels: [{ id: data.channelId, name: data.channelName }]
+                    channels: [channel]
                 });
+                if (isProjectDeleted(project.id) || isChannelDeleted(project.id, channel.id)) return;
+
+                registerProject(project);
 
                 const previousProjectId = user.projectId;
-                user.projectId = data.projectId;
-                user.projectName = data.projectName;
-                user.channelId = data.channelId;
-                user.channelName = data.channelName;
-                user.memberIds = Array.isArray(data.memberIds) ? data.memberIds : [];
+                user.projectId = project.id;
+                user.projectName = project.name;
+                user.channelId = channel.id;
+                user.channelName = channel.name;
+                user.memberIds = project.memberIds;
 
                 send(ws, {
                     type: 'history',
-                    projectId: data.projectId,
-                    channelId: data.channelId,
-                    messages: getRoomHistory(data.projectId, data.channelId)
+                    projectId: project.id,
+                    channelId: channel.id,
+                    messages: getRoomHistory(project.id, channel.id)
                 });
 
                 broadcastAllUsers();
@@ -99,7 +132,17 @@ function setupChat(wss) {
                     send(ws, { type: 'error', message: 'Solo el administrador puede crear proyectos.' });
                     return;
                 }
-                const project = registerProject(data.project);
+                const safeProject = sanitizeProject(data.project);
+                if (!safeProject.name) return;
+                if (isProjectDeleted(safeProject.id)) return;
+                if (projectNameExists(safeProject.name)) {
+                    send(ws, {
+                        type: 'error',
+                        message: 'No es posible crear un proyecto con el mismo nombre de uno existente.'
+                    });
+                    return;
+                }
+                const project = registerProject(safeProject);
                 notifyProjectMembers(project, user.id);
             }
 
@@ -110,32 +153,110 @@ function setupChat(wss) {
                     send(ws, { type: 'error', message: 'Solo el administrador puede crear canales.' });
                     return;
                 }
-                const project = projects.get(data.projectId);
+                const projectId = slugify(data.projectId);
+                const project = projects.get(projectId);
                 if (!project) return;
-                const exists = project.channels.some(channel => channel.id === data.channel.id);
-                if (!exists) project.channels.push(data.channel);
+                const channel = sanitizeChannel(data.channel);
+                if (!channel.name) return;
+                if (isChannelDeleted(projectId, channel.id)) return;
+                if (channelNameExists(project, channel.name)) {
+                    send(ws, {
+                        type: 'error',
+                        message: 'No es posible crear dos canales con el mismo nombre dentro de un mismo proyecto.'
+                    });
+                    return;
+                }
+                const exists = project.channels.some(item => item.id === channel.id);
+                if (!exists) project.channels.push(channel);
                 notifyProjectMembers(project, user.id, {
                     type: 'channel-created',
                     projectId: project.id,
-                    channel: data.channel
+                    channel
                 });
             }
 
+            if (data.type === 'delete-project') {
+                const user = connectedUsers.find(u => u.ws === ws);
+                if (!user || !data.projectId) return;
+                if (!isAdminUser(user)) {
+                    send(ws, { type: 'error', message: 'Solo el administrador puede eliminar proyectos.' });
+                    return;
+                }
+
+                const projectId = slugify(data.projectId);
+
+                markProjectDeleted(projectId);
+                broadcastConnectedUsers({
+                    type: 'project-deleted',
+                    projectId
+                });
+                projects.delete(projectId);
+                deleteRoomHistoriesForProject(projectId);
+                connectedUsers.forEach((connectedUser) => {
+                    if (connectedUser.projectId === projectId) {
+                        connectedUser.projectId = '';
+                        connectedUser.projectName = '';
+                        connectedUser.channelId = '';
+                        connectedUser.channelName = '';
+                    }
+                });
+                broadcastAllUsers();
+            }
+
+            if (data.type === 'delete-channel') {
+                const user = connectedUsers.find(u => u.ws === ws);
+                if (!user || !data.projectId || !data.channelId) return;
+                if (!isAdminUser(user)) {
+                    send(ws, { type: 'error', message: 'Solo el administrador puede eliminar canales.' });
+                    return;
+                }
+
+                const projectId = slugify(data.projectId);
+                const channelId = slugify(data.channelId);
+                const project = projects.get(projectId);
+
+                markChannelDeleted(projectId, channelId);
+                if (project) {
+                    project.channels = project.channels.filter(channel => channel.id !== channelId);
+                }
+                deleteRoomHistory(projectId, channelId);
+                connectedUsers.forEach((connectedUser) => {
+                    if (connectedUser.projectId === projectId && connectedUser.channelId === channelId) {
+                        connectedUser.channelId = '';
+                        connectedUser.channelName = '';
+                    }
+                });
+                broadcastConnectedUsers({
+                    type: 'channel-deleted',
+                    projectId,
+                    channelId
+                });
+                broadcastAllUsers();
+            }
+
             if (data.type === 'chat') {
+                const user = connectedUsers.find(u => u.ws === ws);
+                if (!user) return;
+                const projectId = slugify(data.projectId);
+                const channelId = slugify(data.channelId);
+                const project = projects.get(projectId);
+                if (project && !isProjectMember(user, projectId)) return;
+
                 const chatMessage = {
                     type: 'chat',
-                    projectId: data.projectId,
-                    projectName: data.projectName,
-                    channelId: data.channelId,
-                    channelName: data.channelName,
-                    userId: data.userId,
-                    name: data.name,
-                    img: data.img,
-                    text: data.text,
+                    projectId,
+                    projectName: sanitizeText(data.projectName, 60),
+                    channelId,
+                    channelName: sanitizeText(data.channelName, 40),
+                    userId: user.id,
+                    name: user.name,
+                    img: user.img,
+                    text: sanitizeText(data.text, 20000),
                     time: new Date().toISOString()
                 };
-                addRoomMessage(data.projectId, data.channelId, chatMessage);
-                broadcastRoom(data.projectId, data.channelId, chatMessage);
+                if (!chatMessage.text) return;
+                addRoomMessage(projectId, channelId, chatMessage);
+                broadcastRoom(projectId, channelId, chatMessage);
             }
         });
 
@@ -153,15 +274,18 @@ function setupChat(wss) {
 }
 
 function broadcastAllUsers() {
-    const userList = knownUsers.map(u => ({
-        id: u.id,
-        name: u.name,
-        rol: u.rol,
-        email: u.email,
-        img: u.img,
-        provider: u.provider,
-        connected: connectedUsers.some(c => c.email === u.email)
-    }));
+    const userList = knownUsers.map(u => {
+        const safeUser = sanitizeUser(u);
+        return {
+            id: safeUser.id,
+            name: safeUser.name,
+            rol: safeUser.rol,
+            email: safeUser.email,
+            img: safeUser.img,
+            provider: safeUser.provider,
+            connected: connectedUsers.some(c => c.email === safeUser.email)
+        };
+    });
 
     connectedUsers.forEach(user => {
         send(user.ws, { type: 'users', projectId: user.projectId || '', users: userList });
@@ -183,6 +307,20 @@ function addRoomMessage(projectId, channelId, message) {
     roomHistories.set(key, history.slice(-200));
 }
 
+function broadcastConnectedUsers(data) {
+    connectedUsers.forEach(user => send(user.ws, data));
+}
+
+function deleteRoomHistory(projectId, channelId) {
+    roomHistories.delete(getRoomKey(projectId, channelId));
+}
+
+function deleteRoomHistoriesForProject(projectId) {
+    Array.from(roomHistories.keys())
+        .filter(key => key.startsWith(`${projectId}::`))
+        .forEach(key => roomHistories.delete(key));
+}
+
 function broadcastRoom(projectId, channelId, data) {
     connectedUsers
         .filter(user => isProjectMember(user, projectId))
@@ -190,22 +328,25 @@ function broadcastRoom(projectId, channelId, data) {
 }
 
 function registerProject(projectData) {
-    const existing = projects.get(projectData.id);
-    const channels = Array.isArray(projectData.channels) ? projectData.channels : [];
-    const memberIds = Array.isArray(projectData.memberIds) ? projectData.memberIds.map(Number) : [];
+    const safeProject = sanitizeProject(projectData);
+    if (isProjectDeleted(safeProject.id)) return null;
+
+    const existing = projects.get(safeProject.id);
+    const channels = safeProject.channels.filter(channel => !isChannelDeleted(safeProject.id, channel.id));
+    const memberIds = safeProject.memberIds;
 
     if (existing) {
-        existing.name = projectData.name || existing.name;
+        existing.name = safeProject.name || existing.name;
         existing.memberIds = memberIds.length ? memberIds : existing.memberIds;
         channels.forEach((channel) => {
-            if (!existing.channels.some(item => item.id === channel.id)) {
+            if (!existing.channels.some(item => item.id === channel.id || normalizeProjectName(item.name) === normalizeProjectName(channel.name))) {
                 existing.channels.push(channel);
             }
         });
         return existing;
     }
 
-    const project = { id: projectData.id, name: projectData.name, memberIds, channels };
+    const project = { id: safeProject.id, name: safeProject.name, memberIds, channels };
     projects.set(project.id, project);
     return project;
 }
@@ -229,6 +370,8 @@ function notifyProjectMembers(project, creatorId, extraMessage) {
 
 function sendExistingProjects(user) {
     projects.forEach(project => {
+        if (isProjectDeleted(project.id)) return;
+        project.channels = project.channels.filter(channel => !isChannelDeleted(project.id, channel.id));
         if (!project.memberIds.includes(Number(user.id))) return;
         send(user.ws, {
             type: 'project-created',

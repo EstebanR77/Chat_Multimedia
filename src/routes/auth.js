@@ -1,24 +1,29 @@
 const { getUserByEmail } = require('../models/users');
+const { sanitizeEmail, sanitizeUser } = require('../utils/security');
 
 const publicUser = (user) => ({
     id: user.id,
-    name: user.name,
-    email: user.email,
-    rol: user.rol,
-    img: user.img,
-    provider: user.provider
+    name: sanitizeUser(user).name,
+    email: sanitizeEmail(user.email),
+    rol: sanitizeUser(user).rol,
+    img: sanitizeUser(user).img,
+    provider: sanitizeUser(user).provider
 });
 
 function authRoutes(req, res) {
     try {
         const { email, password } = req.body || {};
 
-        if (!email || !password) {
+        if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
             res.status(400).json({ error: 'Correo y contrasena son obligatorios' });
             return;
         }
 
-        const normalizedEmail = email.trim().toLowerCase();
+        const normalizedEmail = sanitizeEmail(email);
+        if (normalizedEmail.length > 120 || password.length > 128) {
+            res.status(400).json({ error: 'Datos invalidos' });
+            return;
+        }
         const user = getUserByEmail(normalizedEmail);
 
         if (!user) {

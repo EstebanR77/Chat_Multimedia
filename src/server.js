@@ -10,6 +10,8 @@ const authRoutes     = require("./routes/auth");
 const userRoutes     = require("./routes/users");
 const setupChat      = require("./web/chat");
 const { upsertUser } = require("./models/users");
+const { sanitizeUser, sanitizeEmail, sanitizeUrl } = require("./utils/security");
+const { getDeletedItems } = require("./models/deletedItems");
 
 const app = express();
 
@@ -20,12 +22,12 @@ app.set('trust proxy', 1);
 
 const toSessionUser = (user) => ({
     id:       user.id,
-    name:     user.name,
-    email:    user.email,
-    img:      user.img,
-    avatar:   user.avatar || user.img,
-    rol:      user.rol,
-    provider: user.provider,
+    name:     sanitizeUser(user).name,
+    email:    sanitizeEmail(user.email),
+    img:      sanitizeUrl(user.img),
+    avatar:   sanitizeUrl(user.avatar || user.img),
+    rol:      sanitizeUser(user).rol,
+    provider: sanitizeUser(user).provider,
 });
 
 const getGoogleCallbackURL = (req) => {
@@ -91,8 +93,15 @@ app.use(passport.session());
 // ─────────────────────────────────────────────
 // 4. ARCHIVOS ESTÁTICOS Y JSON
 // ─────────────────────────────────────────────
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'same-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+});
+
 app.use(express.static(path.join(__dirname, "../public")));
-app.use(express.json());
+app.use(express.json({ limit: '64kb' }));
 
 // ─────────────────────────────────────────────
 // 4.1 CORS – Permitir ngrok
@@ -151,6 +160,10 @@ app.get("/api/me", (req, res) => {
     }
 });
 
+app.get("/api/deleted-items", (req, res) => {
+    res.json(getDeletedItems());
+});
+
 // ─────────────────────────────────────────────
 // 7. RUTAS API DEL CHAT (login normal + usuarios)
 // ─────────────────────────────────────────────
@@ -177,5 +190,5 @@ const server = app.listen(PORT, () => {
     console.log(`   POST /api/login            → Login normal`);
 });
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ server, maxPayload: 128 * 1024 });
 setupChat(wss);

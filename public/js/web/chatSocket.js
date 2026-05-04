@@ -62,6 +62,21 @@ function sendCreateChannel(projectId, channel) {
     });
 }
 
+function sendDeleteProject(projectId) {
+    sendSocketMessage({
+        type: 'delete-project',
+        projectId
+    });
+}
+
+function sendDeleteChannel(projectId, channelId) {
+    sendSocketMessage({
+        type: 'delete-channel',
+        projectId,
+        channelId
+    });
+}
+
 function sendChatMessage(user, text, project, channel) {
     sendSocketMessage({
         type: 'chat',
