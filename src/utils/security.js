@@ -9,8 +9,9 @@ const TEXT_LIMITS = {
 
 function sanitizeText(value, maxLength = 500) {
     return String(value ?? '')
-        .replace(/[\u0000-\u001f\u007f]/g, '')
-        .replace(/[<>]/g, '')
+        .replace(/[\u0000-\u001f\u007f]/g, '')  // elimina caracteres de control
+        .replace(/[<>]/g, '')                    // bloquea inyección HTML
+        .replace(/[{}\\]/g, '')                  // bloquea inyección CSS
         .trim()
         .slice(0, maxLength);
 }

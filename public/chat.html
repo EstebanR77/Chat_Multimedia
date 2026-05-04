@@ -270,7 +270,7 @@ let currentCat = 'smileys';
 
 function renderEmojis(cat) {
     const grid = document.getElementById('emojiGrid');
-    grid.innerHTML = '';
+    grid.replaceChildren(); // más seguro que innerHTML = ''
     EMOJIS[cat].forEach(emoji => {
         const span = document.createElement('span');
         span.textContent = emoji;

@@ -1,6 +1,8 @@
 function safeText(value, fallback = '') {
     return String(value ?? fallback)
-        .replace(/[\u0000-\u001f\u007f]/g, '')
+        .replace(/[\u0000-\u001f\u007f]/g, '')  // caracteres de control
+        .replace(/[<>]/g, '')                    // inyección HTML
+        .replace(/[{}\\]/g, '')                  // inyección CSS
         .trim();
 }
 
@@ -24,6 +26,12 @@ function createAvatar(imageUrl, displayName, baseClass) {
         img.src = safeUrl;
         img.alt = name;
         img.referrerPolicy = 'no-referrer';
+        // Si la imagen falla, mostrar inicial en lugar de icono roto (evita onerror JS injection)
+        img.onerror = function () {
+            avatar.removeChild(img);
+            avatar.classList.remove('google');
+            avatar.textContent = name ? name[0].toUpperCase() : '?';
+        };
         avatar.appendChild(img);
     } else {
         avatar.textContent = name ? name[0].toUpperCase() : '?';

@@ -97,6 +97,21 @@ app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    // CSP: bloquea inyecciones de HTML, CSS y scripts no autorizados
+    res.setHeader(
+        'Content-Security-Policy',
+        [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline'",   // unsafe-inline necesario por los scripts inline del HTML
+            "style-src 'self' 'unsafe-inline'",     // unsafe-inline necesario por estilos inline
+            "img-src 'self' https: data:",           // permite imágenes de Google (avatares) y data URIs
+            "connect-src 'self' wss: ws:",           // permite WebSocket
+            "font-src 'self'",
+            "object-src 'none'",                     // bloquea plugins (Flash, etc.)
+            "base-uri 'self'",                       // bloquea inyección de <base>
+            "form-action 'self'",                    // bloquea envío de formularios a sitios externos
+        ].join('; ')
+    );
     next();
 });
 

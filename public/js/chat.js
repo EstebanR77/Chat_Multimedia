@@ -467,6 +467,11 @@ function renderUserAvatar(avatar, displayName, imageUrl) {
         img.src = imageUrl;
         img.alt = displayName;
         img.referrerPolicy = 'no-referrer';
+        // Si la imagen falla, mostrar inicial (evita icono roto y posible onerror injection)
+        img.onerror = function () {
+            avatar.replaceChildren();
+            avatar.textContent = displayName ? displayName[0].toUpperCase() : '?';
+        };
         avatar.appendChild(img);
         return;
     }
