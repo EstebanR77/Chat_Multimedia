@@ -74,7 +74,7 @@
              ÁREA CENTRAL — Mensajes
         ════════════════════════════════ -->
         <main class="chat-main" style="position:relative">
-            <header class="chat-header">
+            <header class="chat-header"><button class="menu-btn" onclick="showSidebar()">←</button>
                 <h3 id="channelTitle"># Canal General</h3>
             </header>
 
@@ -252,6 +252,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (panel && !panel.contains(e.target) && e.target !== btn) {
             panel.classList.add('hide');
         }
+    });
+});
+</script>
+<script>
+// Móvil: alternar entre vista sidebar y vista chat
+function showChat() {
+    if (window.innerWidth <= 768) {
+        document.querySelector('.sidebar-left').classList.add('hidden-mobile');
+        document.querySelector('.chat-main').classList.add('active-mobile');
+    }
+}
+
+function showSidebar() {
+    document.querySelector('.sidebar-left').classList.remove('hidden-mobile');
+    document.querySelector('.chat-main').classList.remove('active-mobile');
+}
+
+// Al hacer clic en un canal en móvil, ir al chat
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.channel-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 768) showChat();
+        });
     });
 });
 </script>
