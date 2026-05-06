@@ -1,25 +1,49 @@
 let socket;
 const pendingMessages = [];
+let _socketUser = null;
+let _socketOnMessage = null;
+let _reconnectTimeout = null;
+let _intentionalClose = false;
 
 function connectSocket(user, onMessage) {
+    _socketUser = user;
+    _socketOnMessage = onMessage;
+    _intentionalClose = false;
+    _doConnect();
+}
+
+function _doConnect() {
+    if (_reconnectTimeout) {
+        clearTimeout(_reconnectTimeout);
+        _reconnectTimeout = null;
+    }
+
     // Si la página carga por https (ngrok), usar wss://; si es http (local), usar ws://
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
     socket = new WebSocket(`${protocol}://${location.host}`);
 
     socket.onopen = () => {
-        socket.send(JSON.stringify({ type: 'login', user }));
+        socket.send(JSON.stringify({ type: 'login', user: _socketUser }));
         while (pendingMessages.length) {
             socket.send(JSON.stringify(pendingMessages.shift()));
         }
     };
 
     socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        onMessage(data);
+        try {
+            const data = JSON.parse(event.data);
+            _socketOnMessage(data);
+        } catch (e) {
+            console.error('Error al parsear mensaje WS:', e);
+        }
     };
 
     socket.onclose = () => {
         console.log('Conexion WebSocket cerrada');
+        if (!_intentionalClose) {
+            console.log('Reconectando en 3 segundos...');
+            _reconnectTimeout = setTimeout(_doConnect, 3000);
+        }
     };
 
     socket.onerror = (err) => {
@@ -89,4 +113,10 @@ function sendChatMessage(user, text, project, channel) {
         img: user.img,
         text
     });
+}
+
+function closeSocket() {
+    _intentionalClose = true;
+    if (_reconnectTimeout) clearTimeout(_reconnectTimeout);
+    if (socket) socket.close();
 }

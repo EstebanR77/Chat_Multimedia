@@ -2,7 +2,7 @@ const { getUsers } = require('../models/users');
 const { sanitizeUser } = require('../utils/security');
 
 function userRoutes(req, res) {
-    if (req.method === 'GET' && (req.url === '/' || req.url === '/api/users')) {
+    if (req.method === 'GET') {
         const users = getUsers().map((user) => {
             const safeUser = sanitizeUser(user);
             return {
@@ -14,11 +14,9 @@ function userRoutes(req, res) {
                 provider: safeUser.provider
             };
         });
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(users));
+        res.json(users);
     } else {
-        res.writeHead(405);
-        res.end();
+        res.status(405).end();
     }
 }
 

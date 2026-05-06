@@ -63,7 +63,7 @@ function addMessage(data, currentUserId, options = {}) {
 
         const name = document.createElement('span');
         name.className = 'msg-name';
-        name.textContent = isMine ? 'Tu' : safeText(data.name, 'Usuario');
+        name.textContent = isMine ? 'Tú' : safeText(data.name, 'Usuario');
 
         const text = document.createElement('div');
         text.className = 'msg-text';

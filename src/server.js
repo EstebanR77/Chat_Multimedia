@@ -73,9 +73,10 @@ passport.use(new GoogleStrategy({
 (req, accessToken, refreshToken, profile, done) => {
     const email = profile.emails[0].value.trim().toLowerCase();
     const img = profile.photos[0].value;
-    if (!email.endsWith('@uniboyaca.edu.co')) {
-    return done(null, false);
-}
+    const dominiosPermitidos = ['@uniboyaca.edu.co', '@lynx.com', '@lynxstartups.com'];
+    if (!dominiosPermitidos.some(d => email.endsWith(d))) {
+        return done(null, false);
+    }
     const user = upsertUser({
         name:     profile.displayName,
         email,
@@ -102,11 +103,11 @@ app.use((req, res, next) => {
         'Content-Security-Policy',
         [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline'",   // unsafe-inline necesario por los scripts inline del HTML
-            "style-src 'self' 'unsafe-inline'",     // unsafe-inline necesario por estilos inline
-            "img-src 'self' https: data:",           // permite imágenes de Google (avatares) y data URIs
-            "connect-src 'self' wss: ws:",           // permite WebSocket
-            "font-src 'self'",
+            "script-src 'self' 'unsafe-inline'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "img-src 'self' https: data:",
+            "connect-src 'self' wss: ws:",
+            "font-src 'self' https://fonts.gstatic.com",
             "object-src 'none'",                     // bloquea plugins (Flash, etc.)
             "base-uri 'self'",                       // bloquea inyección de <base>
             "form-action 'self'",                    // bloquea envío de formularios a sitios externos

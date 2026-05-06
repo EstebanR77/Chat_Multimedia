@@ -14,8 +14,10 @@ async function handleLogin() {
         return;
     }
 
-    if (!email.endsWith('@uniboyaca.edu.co') && !email.endsWith('@chat.com')) {
-        showError('Solo se permiten correos @uniboyaca.edu.co');
+    const dominiosPermitidos = ['@lynx.com', '@lynxstartups.com', '@uniboyaca.edu.co', '@chat.com'];
+    const dominioValido = dominiosPermitidos.some(d => email.endsWith(d));
+    if (!dominioValido) {
+        showError('Solo se permiten correos corporativos (@lynx.com, @uniboyaca.edu.co).');
         return;
     }
 

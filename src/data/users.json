@@ -47,11 +47,12 @@
   },
   {
     "id": 6,
-    "name": "SANTIAGO OCHOA PAIPILLA",
+    "name": "MERY HELEN ORTIZ SUAREZ",
     "password": "",
-    "email": "sochoa@uniboyaca.edu.co",
+    "email": "mhortiz@uniboyaca.edu.co",
     "rol": "Usuario Google",
-    "img": "https://lh3.googleusercontent.com/a/ACg8ocKCX2IOvZpxthiN1QjeT4daG15fRQYj9cqvo-1cviwyHV4Me7mw=s96-c",
-    "provider": "google"
+    "img": "https://lh3.googleusercontent.com/a/ACg8ocL7dbqtYLsK46H1feh43-kamUrjFXYrUWM27xazFGUjEgu_VYng=s96-c",
+    "provider": "google",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocL7dbqtYLsK46H1feh43-kamUrjFXYrUWM27xazFGUjEgu_VYng=s96-c"
   }
 ]

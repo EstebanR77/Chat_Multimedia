@@ -436,6 +436,7 @@ function updateRecentMessagesButton() {
 
 function logout() {
     localStorage.removeItem('user');
+    if (typeof closeSocket === 'function') closeSocket();
     window.location.href = '/auth/logout';
 }
 
@@ -554,7 +555,7 @@ function initCreateControls() {
             formSubmit.textContent = 'Crear proyecto';
         } else {
             document.getElementById('modalTitle').textContent = 'Nuevo canal';
-            document.getElementById('modalSubtitle').textContent = 'Anade un canal al proyecto seleccionado.';
+            document.getElementById('modalSubtitle').textContent = 'Añade un canal al proyecto seleccionado.';
             itemNameLabel.textContent = 'Nombre del canal';
             itemNameInput.placeholder = 'Ej. Marketing';
             itemNameInput.maxLength = channelNameMaxLength;
