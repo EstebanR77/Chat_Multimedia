@@ -87,18 +87,6 @@ function setupChat(wss) {
                 send(ws, { type: 'deleted-items', deletedItems: getDeletedItems() });
                 sendExistingProjects(currentUser);
 
-                // Anunciar conexión a todos los demás
-                const joinMsg = {
-                    type: 'system',
-                    text: `${sanitizeText(currentUser.name, 80)} se unió al chat`,
-                    time: new Date().toISOString()
-                };
-                connectedUsers.forEach(u => {
-                    if (u.ws !== ws && u.projectId && u.channelId) {
-                        send(u.ws, { ...joinMsg, projectId: u.projectId, channelId: u.channelId });
-                    }
-                });
-
                 // Mandar lista de personas inmediatamente
                 broadcastAllUsers();
             }
@@ -277,19 +265,6 @@ function setupChat(wss) {
             if (user) {
                 console.log('Usuario desconectado:', user.name);
                 connectedUsers = connectedUsers.filter(u => u.ws !== ws);
-
-                // Anunciar desconexión a todos los demás
-                const leaveMsg = {
-                    type: 'system',
-                    text: `${sanitizeText(user.name, 80)} abandonó el chat`,
-                    time: new Date().toISOString()
-                };
-                connectedUsers.forEach(u => {
-                    if (u.projectId && u.channelId) {
-                        send(u.ws, { ...leaveMsg, projectId: u.projectId, channelId: u.channelId });
-                    }
-                });
-
                 broadcastAllUsers();
             }
         });
