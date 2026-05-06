@@ -47,6 +47,33 @@
   },
   {
     "id": 6,
+    "name": "SANTIAGO OCHOA PAIPILLA",
+    "password": "",
+    "email": "sochoa@uniboyaca.edu.co",
+    "rol": "Usuario Google",
+    "img": "https://lh3.googleusercontent.com/a/ACg8ocKCX2IOvZpxthiN1QjeT4daG15fRQYj9cqvo-1cviwyHV4Me7mw=s96-c",
+    "provider": "google"
+  },
+  {
+    "id": 7,
+    "name": "DAVID FERNANDO GIL LUIS",
+    "password": "",
+    "email": "davgil@uniboyaca.edu.co",
+    "rol": "Usuario Google",
+    "img": "https://lh3.googleusercontent.com/a/ACg8ocJQt6xPv9FDSTFo2FJorzxTI1y1V5ok86pRInIsUe_px42fyw=s96-c",
+    "provider": "google"
+  },
+  {
+    "id": 8,
+    "name": "JUAN DAVID TOBOS ACERO",
+    "password": "",
+    "email": "jdtobos@uniboyaca.edu.co",
+    "rol": "Usuario Google",
+    "img": "https://lh3.googleusercontent.com/a/ACg8ocL9MAR68w9GVfihPvVFwgQT1wfT4z4oFU6EvyKdUfcViYf7PZ-e=s96-c",
+    "provider": "google"
+  },
+  {
+    "id": 9,
     "name": "MERY HELEN ORTIZ SUAREZ",
     "password": "",
     "email": "mhortiz@uniboyaca.edu.co",
